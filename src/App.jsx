@@ -1,12 +1,16 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+// FIX: Using './components/' for shared modules (Logins and Routers)
 import MainLoginSelector from './components/MainLoginSelector'; 
 import AdminLogin from './components/AdminLogin'; 
 import CoachLogin from './components/CoachLogin'; 
 import PlayerLogin from './components/PlayerLogin'; 
-import AdminDashboard from './pages/AdminDashboard'; // ✅ Imported
-import CoachDashboard from './pages/CoachDashboard'; // ✅ Imported
-import DashboardRouter from './components/DashboardRouter'; // Used as placeholder for Player
+import DashboardRouter from './components/DashboardRouter'; 
+// FIX: Using './pages/' for page-level components (Dashboards)
+import AdminDashboard from './pages/AdminDashboard'; 
+import CoachDashboard from './pages/CoachDashboard'; 
+import PlayerDashboard from './pages/PlayerDashboard'; 
+
 
 function App() {
   return (
@@ -23,7 +27,7 @@ function App() {
       `}</style>
 
       <Routes>
-        {/* 1. Login Selector Root */}
+        {/* 1. Login Selectors */}
         <Route path="/" element={<MainLoginSelector />} />
 
         {/* 2. Specific Login Forms */}
@@ -31,24 +35,13 @@ function App() {
         <Route path="/coach/login" element={<CoachLogin />} />
         <Route path="/player/login" element={<PlayerLogin />} /> 
 
-        {/* 3. *** THE CRITICAL FIX: Explicit Dashboard Routes *** */}
-        {/* Admin Login navigates to this path */}
+        {/* 3. CRITICAL: Explicit Dashboard Routes (Target of successful login) */}
         <Route path="/admin/dashboard" element={<AdminDashboard />} /> 
-        
-        {/* Coach Login navigates to this path */}
         <Route path="/coach-dashboard" element={<CoachDashboard />} /> 
-        
-        {/* Player Login navigates to this path. Using DashboardRouter as a placeholder. */}
-        <Route path="/player-dashboard" element={<DashboardRouter />} />
+        <Route path="/player-dashboard" element={<PlayerDashboard />} /> 
 
-        {/* 4. Keep the general dashboard path for flexibility */}
+        {/* General fallback routes */}
         <Route path="/dashboard" element={<DashboardRouter />} />
-
-        {/* 5. Catch-all: This can be dangerous if not handled in DashboardRouter. 
-           It's best to remove it or direct it to a 404 page for stability.
-           For now, we'll keep it commented out to prevent infinite redirects.
-        <Route path="/*" element={<DashboardRouter />} /> 
-        */}
       </Routes>
     </>
   );

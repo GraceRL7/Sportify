@@ -1,23 +1,17 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  initializeApp,
-  getApps,
-  getApp
-} from 'firebase/app';
+// 🎯 CRITICAL FIX: Import centralized instances
 import {
-  getAuth,
+  auth,
+  db,
   signInWithEmailAndPassword,
   signOut,
-} from 'firebase/auth';
-import {
-  getFirestore,
   doc,
-  getDoc
-} from 'firebase/firestore';
+  getDoc,
+  appId as FIREBASE_APP_ID // Import shared app ID
+} from '../firebase'; // 🎯 ADJUSTED PATH: Trying '../../firebase' to resolve compiler error
 
-// --- Configuration Copied from src/firebase.js (Sportify) ---
-// Note: This block is safe because it is executed once at the module level.
+// --- Configuration (Retained for constants only) ---
 const firebaseConfig = {
     apiKey: "AIzaSyAzkQJo_aAcs1jvj4VOgzFksINuur9uvb8",
     authDomain: "sportify-df84b.firebaseapp.com",
@@ -28,25 +22,14 @@ const firebaseConfig = {
     measurementId: "G-ZBMG376GBS"
 };
 
-// --- Local Firebase Initialization (Executed once at module load) ---
-// Uses the safest method to get the app instance, preventing configuration conflicts.
-const appName = 'sportify'; 
-const app = getApps().some(a => a.name === appName) ? getApp(appName) : initializeApp(firebaseConfig, appName);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
 // --- Component Configuration ---
 const TARGET_ROLE = 'admin';
 
-// *** FIX: Construct the full, correct Firestore path ***
-const FIREBASE_APP_ID = firebaseConfig.appId; 
 const USER_COLLECTION = `artifacts/${FIREBASE_APP_ID}/public/data/users`; 
-// The document will be fetched from: artifacts/{appId}/public/data/users/{user.uid}
 
 const AdminLogin = () => {
   const navigate = useNavigate(); 
   
-  // *** FIX: Set default password to match Firebase Auth ***
   const [email, setEmail] = useState('admin@sportify.com'); 
   const [password, setPassword] = useState('admin12@'); 
   
@@ -70,7 +53,7 @@ const AdminLogin = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Lookup role using the authenticated user's UID in the correct collection path
+      // 2. Lookup role using the authenticated user's UID
       const userDocRef = doc(db, USER_COLLECTION, user.uid); 
       const userDocSnap = await getDoc(userDocRef);
 
@@ -86,17 +69,16 @@ const AdminLogin = () => {
             console.log(`Authorization Failed: User role is '${userData.role}', expected '${TARGET_ROLE}'.`);
         }
       } else {
-          // This case handles the "missing document" scenario.
           console.error("Authorization Failed: User profile document not found for UID:", user.uid);
       }
 
       if (isAuthorized) {
         console.log('Admin login successful for UID:', user.uid);
-        // *** CORRECTION APPLIED HERE (Using capitalized path) ***
+        // Navigation path matches App.jsx route
         navigate('/admin/dashboard');
  
       } else {
-        // If authenticated but not authorized as admin (due to missing doc or wrong role), sign out.
+        // If authenticated but not authorized as admin, sign out.
         await signOut(auth);
         setError('Access Denied: You do not have administrator privileges.');
       }
@@ -115,7 +97,7 @@ const AdminLogin = () => {
         case 'auth/invalid-credential':
           errorMessage = 'Invalid email or password.';
           break;
-        case 'permission-denied': // Catch-all for security rule failures
+        case 'permission-denied':
           errorMessage = 'Login failed: Insufficient permissions to check role.';
           break;
         default:

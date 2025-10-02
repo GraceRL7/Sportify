@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DashboardLayout from '../components/DashboardLayout';
-import ApproveRegistrations from '../components/ApproveRegistrations';
-import GenerateReports from '../components/GenerateReports';
+import DashboardLayout from '../components/DashboardLayout'; 
+import ApproveRegistrations from '../components/ApproveRegistrations'; 
+import GenerateReports from '../components/GenerateReports'; 
 import ManageTrials from '../components/ManageTrials'; 
 
-// CORRECTED IMPORT PATH for AuthContext
+// 🎯 FIX: Assuming AuthContext is at src/AuthContext.jsx (two levels up from a deeper Admin Dashboard location)
 import { useAuth } from '../context/AuthContext'; 
 
-// 🎯 CRITICAL FIX: Import the centralized db and appId from your firebase.jsx file
-// Assuming firebase.jsx is at the src/ root, the path from src/pages is '../firebase'
+// 🎯 FIX: Assuming firebase.jsx is at src/firebase.jsx (two levels up from a deeper Admin Dashboard location)
 import { 
     db, // Use the shared db instance
     appId as FIREBASE_APP_ID // Use the shared appId
@@ -21,20 +20,6 @@ import {
     where,
     onSnapshot
 } from 'firebase/firestore'; 
-
-// ❌ REMOVED: All local Firebase initialization code that caused the conflict errors.
-/* import { initializeApp, getApps, getApp } from 'firebase/app'; 
-import { getFirestore } from 'firebase/firestore';
-const firebaseConfig = { ... };
-const appName = 'sportify'; 
-const app = getApps().some(a => a.name === appName) ? getApp(appName) : initializeApp(firebaseConfig, appName);
-const db = getFirestore(app);
-const FIREBASE_APP_ID = firebaseConfig.appId;
-*/
-
-const PENDING_APPLICATIONS_COLLECTION = `admin_data/${FIREBASE_APP_ID}/pending_applications`;
-const COACHES_COLLECTION = 'coaches'; 
-
 
 // Icons 
 const ICON_DASHBOARD = '📊';
@@ -50,8 +35,10 @@ const ADMIN_NAV_ITEMS = [
     { key: 'reports', label: 'System Reports', icon: ICON_REPORTS },
 ];
 
+const PENDING_APPLICATIONS_COLLECTION = `admin_data/${FIREBASE_APP_ID}/pending_applications`;
+const COACHES_COLLECTION = 'coaches'; 
 
-// --- STYLING CONSTANTS (Omitted for brevity, no change) ---
+// --- STYLING CONSTANTS (No Change) ---
 const cardGridStyle = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
@@ -93,7 +80,6 @@ const Card = ({ title, value, color }) => (
 // --- END STYLING CONSTANTS ---
 
 
-// --- AdminOverview component now uses the centralized DB instance ---
 const AdminOverview = () => {
     const [stats, setStats] = useState({ 
         pendingApps: '...', 
@@ -133,7 +119,6 @@ const AdminOverview = () => {
 
 
         return () => {
-            // Clean up all listeners to avoid memory leaks and state conflicts
             if (unsubscribeApps) unsubscribeApps();
             if (unsubscribeCoaches) unsubscribeCoaches();
             if (unsubscribeTrials) unsubscribeTrials();
@@ -185,12 +170,14 @@ export default function AdminDashboard() {
     const [activeFeature, setActiveFeature] = useState('overview');
     const navigate = useNavigate();
     
+    // 1. Retrieve the logout function from AuthContext
     const { logout } = useAuth(); 
 
+    // 2. Define the local handler for logout and redirection
     const handleLogout = async () => {
         try {
-            await logout(); 
-            navigate('/');
+            await logout(); // Call the central Firebase sign-out
+            navigate('/'); // Redirect to the main login selector page
         } catch (error) {
             console.error("Logout failed:", error);
             navigate('/'); 
@@ -213,7 +200,7 @@ export default function AdminDashboard() {
 
     const currentTitle = ADMIN_NAV_ITEMS.find(item => item.key === activeFeature)?.label || 'Admin Dashboard';
 
-    // LOGOUT BUTTON COMPONENT FOR THE SIDEBAR FOOTER
+    // 3. Define the Logout Button JSX (This renders the button itself)
     const LogoutButton = (
         <div style={{ padding: '10px 20px', borderTop: '1px solid #e0e0e0' }}>
             <button 
@@ -221,7 +208,7 @@ export default function AdminDashboard() {
                 style={{
                     width: '100%',
                     padding: '10px',
-                    backgroundColor: '#dc3545', // Red color for logout/danger
+                    backgroundColor: '#dc3545', // Admin theme color (Red for critical action)
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
@@ -241,6 +228,7 @@ export default function AdminDashboard() {
             navItems={ADMIN_NAV_ITEMS} 
             activeFeature={activeFeature}
             setActiveFeature={setActiveFeature}
+            // 4. Pass the Logout Button JSX to the DashboardLayout sidebar footer
             sidebarFooter={LogoutButton} 
         >
             {renderContent()}

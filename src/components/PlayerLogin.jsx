@@ -6,19 +6,15 @@ import {
   sendPasswordResetEmail,
 } from 'firebase/auth';
 import {
-  initializeApp,
-  getApps,
-  getApp
-} from 'firebase/app';
-import {
-  getAuth
-} from 'firebase/auth';
-import {
   getFirestore,
   doc,
   setDoc,
   getDoc
 } from 'firebase/firestore';
+
+// 🎯 CRITICAL FIX: Import centralized instances
+import { auth, db, appId } from '../firebase';
+
 
 // IMPORTANT: Firebase configuration for your project (Homifi)
 const firebaseConfig = {
@@ -31,15 +27,9 @@ const firebaseConfig = {
     measurementId: "G-ZBMG376GBS"
 };
 
-const FIREBASE_APP_ID = firebaseConfig.appId;
+const FIREBASE_APP_ID = appId; // Use the imported appId
 // STANDARD PROFILE PATH: Use the path your app is built around
 const USER_PROFILE_COLLECTION = `artifacts/${FIREBASE_APP_ID}/public/data/users`; 
-
-
-// Initialize Firebase only once
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const db = getFirestore(app);
 
 
 const PlayerLogin = () => {
@@ -91,16 +81,17 @@ const PlayerLogin = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // FIX: Check the complex, nested path
+      // Check the complex, nested path
       const userDocRef = doc(db, USER_PROFILE_COLLECTION, user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       const userRole = userDocSnap.data()?.role;
 
-      // FIX: Accept either 'player' or the original 'user' role
+      // Accept either 'player' or the original 'user' role
       if (userDocSnap.exists() && (userRole === 'player' || userRole === 'user')) { 
         setSuccessMessage('Login successful!');
- navigate('/player-dashboard'); 
+        // Navigation path matches App.jsx route
+        navigate('/player-dashboard'); 
       } else {
         setError('Invalid credentials or unauthorized role. Please check your email and password.');
         await auth.signOut();
@@ -150,7 +141,7 @@ const PlayerLogin = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // FIX: Create the profile in the complex, nested path
+      // Create the profile in the complex, nested path
       await setDoc(doc(db, USER_PROFILE_COLLECTION, user.uid), {
         email: user.email,
         role: 'player', // Assign 'player' role
@@ -596,7 +587,7 @@ const PlayerLogin = () => {
 
             <p
               className="back-to-main-login"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/')} 
             >
               ← Back to Main Login Page
             </p>
