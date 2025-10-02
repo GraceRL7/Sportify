@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DashboardLayout from '../components/DashboardLayout'; // 🎯 FIX: Assuming components/ is sibling to pages/
-import { useAuth } from '../context/AuthContext'; // 🎯 FIX: Assuming context/ is sibling to pages/
+import DashboardLayout from '../components/DashboardLayout'; // Correct path: src/pages -> src/components
+import { useAuth } from '../context/AuthContext'; // Correct path: src/pages -> src/context/
+
+// Imports for Coach-specific features (from src/components/)
+import PlayerList from '../components/PlayerList'; 
+import PlayerEvaluation from '../components/PlayerEvaluation'; 
+import PlayerSchedule from '../components/PlayerSchedule'; 
+import UploadTrialResults from '../components/UploadTrialResults'; 
 
 // Define navigation items for the Coach sidebar
 const COACH_NAV_ITEMS = [
-    { key: 'overview', label: 'Coach Overview', icon: '匠' },
-    // Add other navigation items here
+    { key: 'overview', label: 'Coach Overview', icon: '📊' },
+    { key: 'roster', label: 'Player List', icon: '👥' },
+    { key: 'evaluate', label: 'Evaluate Players', icon: '📝' },
+    { key: 'schedule', label: 'View Schedule', icon: '🗓️' },
+    { key: 'upload', label: 'Upload Results', icon: '⬆️' },
 ];
 
 // --- Placeholder Content Components ---
@@ -16,19 +25,20 @@ const CoachOverview = () => (
             Welcome, Coach!
         </h2>
         <p style={{ fontSize: '1.1em', color: '#555', marginTop: '20px' }}>
-            Welcome to your **Sportify Coach Panel**. Use the sidebar to access your assigned players, manage evaluations, and view team schedules.
+            Welcome to your **Sportify Coach Panel**. Use the sidebar to manage player evaluations, view trial schedules, and upload final results.
         </p>
         <div style={{ marginTop: '30px', padding: '25px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#e9f7ff' }}>
             <h3 style={{ color: '#20143b' }}>Quick Access</h3>
-            <p><strong>Assigned Players:</strong> 12 (View Roster)</p>
-            <p><strong>Pending Evaluations:</strong> 3 (Complete Now)</p>
+            <p><strong>Assigned Players:</strong> 12</p>
+            <p><strong>Pending Evaluations:</strong> 3</p>
             <p style={{ fontSize: '0.9em', color: '#666', marginTop: '15px' }}>
-                *Note: Feature modules need to be implemented.*
+                *Note: Feature components are ready to be implemented.*
             </p>
         </div>
     </div>
 );
 
+// Generic Placeholder (used only if a feature component is missing)
 const PlaceholderFeature = ({ featureName }) => (
     <div style={{ padding: '40px', textAlign: 'center' }}>
         <h2 style={{ color: '#007bff' }}>{featureName} Feature</h2>
@@ -57,17 +67,25 @@ export default function CoachDashboard() {
     };
 
     const renderContent = () => {
+        // Map navigation key to component
         switch(activeFeature) {
+            case 'roster':
+                return <PlayerList />; 
+            case 'evaluate':
+                return <PlayerEvaluation />; 
+            case 'schedule':
+                return <PlayerSchedule />; 
+            case 'upload':
+                return <UploadTrialResults />; 
             case 'overview':
-                return <CoachOverview />;
             default:
-                return <PlaceholderFeature featureName={`Feature: ${activeFeature}`} />; 
+                return <CoachOverview />;
         }
     };
 
     const currentTitle = COACH_NAV_ITEMS.find(item => item.key === activeFeature)?.label || 'Coach Dashboard';
 
-    // 3. Define the Logout Button JSX (This renders the button itself)
+    // 3. Define the Logout Button JSX 
     const LogoutButton = (
         <div style={{ padding: '10px 20px', borderTop: '1px solid #e0e0e0' }}>
             <button 
@@ -75,7 +93,7 @@ export default function CoachDashboard() {
                 style={{
                     width: '100%',
                     padding: '10px',
-                    backgroundColor: '#28a745', // Coach theme color
+                    backgroundColor: '#28a745', // Coach theme color (Green)
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',

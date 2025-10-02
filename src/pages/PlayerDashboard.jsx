@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// 🎯 FIX: Path corrected to move up one level (out of 'pages') and into 'components'
+// Components (src/pages -> src/components/)
 import DashboardLayout from '../components/DashboardLayout'; 
-// Assuming AuthContext is at src/context/AuthContext.jsx relative to src/pages
+import PlayerProfile from '../components/PlayerProfile'; // Based on file structure image
+import TrialApplication from '../components/TrialApplication'; // Based on file structure image
+import PlayerSchedule from '../components/PlayerSchedule'; // Based on file structure image
+import TrialResults from '../components/TrialResults'; // Based on file structure image
+
+// Context (src/pages -> src/context/)
 import { useAuth } from '../context/AuthContext'; 
 
 // Placeholder component for Player-specific content
@@ -28,8 +33,10 @@ const PlayerOverview = () => (
 // Define navigation items for the Player sidebar
 const PLAYER_NAV_ITEMS = [
     { key: 'overview', label: 'My Dashboard', icon: '⚽' },
-    { key: 'schedule', label: 'Training Schedule', icon: '🗓️' },
-    { key: 'performance', label: 'Performance Metrics', icon: '📈' },
+    { key: 'profile', label: 'Manage Profile', icon: '👤' },
+    { key: 'apply', label: 'Apply for Trial', icon: '📝' },
+    { key: 'schedule', label: 'View Schedule', icon: '🗓️' },
+    { key: 'results', label: 'View Results', icon: '📈' },
 ];
 
 
@@ -49,11 +56,17 @@ export default function PlayerDashboard() {
     };
 
     const renderContent = () => {
-        // Placeholder switch for feature selection
+        // Render content based on selected feature
         switch (activeFeature) {
-            case 'overview':
+            case 'profile':
+                return <PlayerProfile />;
+            case 'apply':
+                return <TrialApplication />;
             case 'schedule':
-            case 'performance':
+                return <PlayerSchedule />;
+            case 'results':
+                return <TrialResults />;
+            case 'overview':
             default:
                 return <PlayerOverview />; 
         }

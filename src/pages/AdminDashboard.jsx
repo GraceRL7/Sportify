@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+// Components (src/pages -> src/components/)
 import DashboardLayout from '../components/DashboardLayout'; 
 import ApproveRegistrations from '../components/ApproveRegistrations'; 
 import GenerateReports from '../components/GenerateReports'; 
-import ManageTrials from '../components/ManageTrials'; 
+import ManageTrials from '../components/ManageTrials'; // Assumed to handle schedules
 
-// 🎯 FIX: Assuming AuthContext is at src/AuthContext.jsx (two levels up from a deeper Admin Dashboard location)
+// Path for AuthContext confirmed: src/pages -> src/context/AuthContext
 import { useAuth } from '../context/AuthContext'; 
 
-// 🎯 FIX: Assuming firebase.jsx is at src/firebase.jsx (two levels up from a deeper Admin Dashboard location)
+// Path for Firebase confirmed: src/pages -> src/firebase
 import { 
     db, // Use the shared db instance
     appId as FIREBASE_APP_ID // Use the shared appId
@@ -31,7 +32,7 @@ const ICON_TRIALS = '🗓️';
 const ADMIN_NAV_ITEMS = [
     { key: 'overview', label: 'Admin Overview', icon: ICON_DASHBOARD },
     { key: 'approve', label: 'Approve Registrations', icon: ICON_APPROVE },
-    { key: 'manageTrials', label: 'Manage Trials', icon: ICON_TRIALS }, 
+    { key: 'manageTrials', label: 'Manage Trials/Schedules', icon: ICON_TRIALS }, 
     { key: 'reports', label: 'System Reports', icon: ICON_REPORTS },
 ];
 
