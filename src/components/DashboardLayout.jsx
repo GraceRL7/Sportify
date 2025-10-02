@@ -1,7 +1,7 @@
 // C:\sportify\src\components\DashboardLayout.js
 
 import React from 'react';
-import styles from './DashboardLayout.module.css';
+import styles from './DashboardLayout.module.css'; // Assuming this CSS file exists
 
 const DashboardLayout = ({ title, navItems, activeFeature, setActiveFeature, children }) => {
     return (

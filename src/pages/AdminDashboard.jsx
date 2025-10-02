@@ -1,39 +1,37 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import ApproveRegistrations from '../components/ApproveRegistrations';
 import GenerateReports from '../components/GenerateReports';
 import ManageTrials from '../components/ManageTrials'; 
 
-// Import Firebase dependencies for AdminOverview component
+// CORRECTED IMPORT PATH for AuthContext
+import { useAuth } from '../context/AuthContext'; 
+
+// 🎯 CRITICAL FIX: Import the centralized db and appId from your firebase.jsx file
+// Assuming firebase.jsx is at the src/ root, the path from src/pages is '../firebase'
 import { 
-    initializeApp,
-    getApps,
-    getApp
-} from 'firebase/app';
+    db, // Use the shared db instance
+    appId as FIREBASE_APP_ID // Use the shared appId
+} from '../firebase'; 
+
 import {
-    getFirestore,
     collection,
     query,
     where,
     onSnapshot
-} from 'firebase/firestore';
+} from 'firebase/firestore'; 
 
-// --- Firebase Configuration copied from AdminLogin.jsx for standalone use ---
-const firebaseConfig = {
-    apiKey: "AIzaSyAzkQJo_aAcs1jvj4VOgzFksINuur9uvb8",
-    authDomain: "sportify-df84b.firebaseapp.com",
-    projectId: "sportify-df84b",
-    storageBucket: "sportify-df84b.firebasestorage.app",
-    messagingSenderId: "125792303495",
-    appId: "1:125792303495:web:8944023fee1e655eee7b22",
-    measurementId: "G-ZBMG376GBS"
-};
+// ❌ REMOVED: All local Firebase initialization code that caused the conflict errors.
+/* import { initializeApp, getApps, getApp } from 'firebase/app'; 
+import { getFirestore } from 'firebase/firestore';
+const firebaseConfig = { ... };
 const appName = 'sportify'; 
 const app = getApps().some(a => a.name === appName) ? getApp(appName) : initializeApp(firebaseConfig, appName);
 const db = getFirestore(app);
 const FIREBASE_APP_ID = firebaseConfig.appId;
+*/
 
-// --- PATH FIX: Using valid 3-segment path structure ---
 const PENDING_APPLICATIONS_COLLECTION = `admin_data/${FIREBASE_APP_ID}/pending_applications`;
 const COACHES_COLLECTION = 'coaches'; 
 
@@ -53,7 +51,7 @@ const ADMIN_NAV_ITEMS = [
 ];
 
 
-// --- STYLING CONSTANTS FOR THE NEW CARD LAYOUT ---
+// --- STYLING CONSTANTS (Omitted for brevity, no change) ---
 const cardGridStyle = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
@@ -95,7 +93,7 @@ const Card = ({ title, value, color }) => (
 // --- END STYLING CONSTANTS ---
 
 
-// --- UPDATED: AdminOverview component now fetches live data and uses Cards ---
+// --- AdminOverview component now uses the centralized DB instance ---
 const AdminOverview = () => {
     const [stats, setStats] = useState({ 
         pendingApps: '...', 
@@ -135,6 +133,7 @@ const AdminOverview = () => {
 
 
         return () => {
+            // Clean up all listeners to avoid memory leaks and state conflicts
             if (unsubscribeApps) unsubscribeApps();
             if (unsubscribeCoaches) unsubscribeCoaches();
             if (unsubscribeTrials) unsubscribeTrials();
@@ -184,6 +183,19 @@ const AdminOverview = () => {
 
 export default function AdminDashboard() {
     const [activeFeature, setActiveFeature] = useState('overview');
+    const navigate = useNavigate();
+    
+    const { logout } = useAuth(); 
+
+    const handleLogout = async () => {
+        try {
+            await logout(); 
+            navigate('/');
+        } catch (error) {
+            console.error("Logout failed:", error);
+            navigate('/'); 
+        }
+    };
 
     const renderContent = () => {
         switch (activeFeature) {
@@ -201,12 +213,35 @@ export default function AdminDashboard() {
 
     const currentTitle = ADMIN_NAV_ITEMS.find(item => item.key === activeFeature)?.label || 'Admin Dashboard';
 
+    // LOGOUT BUTTON COMPONENT FOR THE SIDEBAR FOOTER
+    const LogoutButton = (
+        <div style={{ padding: '10px 20px', borderTop: '1px solid #e0e0e0' }}>
+            <button 
+                onClick={handleLogout}
+                style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: '#dc3545', // Red color for logout/danger
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    transition: 'background-color 0.2s'
+                }}
+            >
+                🚪 Logout
+            </button>
+        </div>
+    );
+
     return (
         <DashboardLayout 
             title={currentTitle} 
             navItems={ADMIN_NAV_ITEMS} 
             activeFeature={activeFeature}
             setActiveFeature={setActiveFeature}
+            sidebarFooter={LogoutButton} 
         >
             {renderContent()}
         </DashboardLayout>

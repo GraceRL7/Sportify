@@ -100,7 +100,7 @@ const PlayerLogin = () => {
       // FIX: Accept either 'player' or the original 'user' role
       if (userDocSnap.exists() && (userRole === 'player' || userRole === 'user')) { 
         setSuccessMessage('Login successful!');
-        navigate('/player-dashboard'); 
+ navigate('/player-dashboard'); 
       } else {
         setError('Invalid credentials or unauthorized role. Please check your email and password.');
         await auth.signOut();

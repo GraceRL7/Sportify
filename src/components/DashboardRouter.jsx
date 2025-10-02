@@ -12,6 +12,7 @@ export default function DashboardRouter() {
   const role = getUserRole();
 
   if (!role) {
+    // If no role is found (user not logged in), redirect to the main login selector
     return <Navigate to="/" replace />;
   }
 
@@ -23,6 +24,7 @@ export default function DashboardRouter() {
     case 'player':
       return <PlayerDashboard />;
     default:
+      // If a role exists but is unrecognized, redirect to main login
       return <Navigate to="/" replace />;
   }
 }
