@@ -1,0 +1,63 @@
+/* C:\sportify\src\components\DashboardLayout.module.css */
+
+.dashboardContainer {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #343a40; /* Dark background */
+    color: white;
+    padding: 20px 0;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebarHeader {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 0 10px;
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #ffc107; /* Accent color */
+}
+
+.navList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.navItem {
+    padding: 15px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    font-size: 1.05em;
+}
+
+.navItem:hover {
+    background-color: #495057;
+}
+
+.activeNavItem {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+    border-left: 5px solid #ffc107;
+    padding-left: 15px;
+}
+
+.contentArea {
+    flex-grow: 1;
+    padding: 30px;
+    background-color: #f8f9fa; /* Light background for content */
+}
+
+.pageTitle {
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+    color: #343a40;
+}
