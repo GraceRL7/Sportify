@@ -1,31 +1,35 @@
-/* C:\sportify\src\components\DashboardLayout.module.css */
+/* C:\sportify\src\components\DashboardLayout.module.css (Updated) */
 
-.dashboardContainer {
+.layoutRoot {
     display: flex;
     min-height: 100vh;
+    background-color: #f8f9fa; /* Light background for the whole page */
 }
 
 .sidebar {
     width: 250px;
     background-color: #343a40; /* Dark background */
     color: white;
-    padding: 20px 0;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column; /* Allow sidebar to space out header/nav */
+    flex-shrink: 0; /* Prevent sidebar from shrinking */
 }
 
 .sidebarHeader {
     text-align: center;
-    margin-bottom: 30px;
-    padding: 0 10px;
+    padding: 20px 10px;
     font-size: 1.5em;
     font-weight: 700;
     color: #ffc107; /* Accent color */
+    border-bottom: 1px solid #495057; /* Separator */
 }
 
 .navList {
     list-style: none;
     padding: 0;
     margin: 0;
+    flex-grow: 1; /* Make nav list fill available space */
+    padding-top: 15px;
 }
 
 .navItem {
@@ -34,6 +38,7 @@
     transition: background-color 0.2s, color 0.2s;
     display: flex;
     align-items: center;
+    gap: 10px; /* Space between icon and label */
     font-size: 1.05em;
 }
 
@@ -49,15 +54,76 @@
     padding-left: 15px;
 }
 
-.contentArea {
-    flex-grow: 1;
-    padding: 30px;
-    background-color: #f8f9fa; /* Light background for content */
+/* --- NEW Main Content Wrapper --- */
+/* This wrapper holds the topbar and the scrollable content area */
+.mainContentWrapper {
+    flex-grow: 1; /* Takes up all remaining space */
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Fix height to viewport */
+    overflow: hidden; /* Prevent double scrollbars */
 }
 
+/* --- NEW Topbar Styles --- */
+.topbar {
+    height: 60px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    flex-shrink: 0; /* Prevent topbar from shrinking */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.userActions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.profileButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #333;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background-color: #f1f3f5;
+}
+
+.logoutButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    background-color: #dc3545;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.logoutButton:hover {
+    background-color: #c82333;
+}
+
+/* --- MODIFIED Page Title --- */
+/* It is now inside the topbar */
 .pageTitle {
-    border-bottom: 2px solid #e9ecef;
-    padding-bottom: 15px;
-    margin-bottom: 25px;
+    margin: 0;
+    font-size: 1.6em;
     color: #343a40;
+}
+
+/* --- MODIFIED Content Area --- */
+.contentArea {
+    flex-grow: 1; /* Fills remaining space */
+    padding: 30px;
+    overflow-y: auto; /* Makes only this area scrollable */
+    background-color: #f8f9fa; /* Light bg for content */
 }

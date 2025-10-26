@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'; // <-- This line was fixed
 import { useNavigate } from 'react-router-dom';
+import { LogOut, LayoutDashboard, User, CheckSquare, Calendar } from 'lucide-react'; // Added icons
+
 // Components (src/pages -> src/components/)
 import DashboardLayout from '../components/DashboardLayout'; 
 import PlayerProfile from '../components/PlayerProfile'; // Based on file structure image
-import TrialApplication from '../components/TrialApplication'; // Based on file structure image
-import PlayerSchedule from '../components/PlayerSchedule'; // Based on file structure image
-import TrialResults from '../components/TrialResults'; // Based on file structure image
+import TrialApplication from '../components/TrialApplication'; // This is the file we are rebuilding
+import PlayerSchedule from '../components/PlayerSchedule'; 
 
 // Context (src/pages -> src/context/)
 import { useAuth } from '../context/AuthContext'; 
+import styles from '../components/DashboardLayout.module.css'; // Import layout styles
 
 // Placeholder component for Player-specific content
 const PlayerOverview = () => (
@@ -30,20 +32,19 @@ const PlayerOverview = () => (
     </div>
 );
 
-// Define navigation items for the Player sidebar
+// --- Define navigation items for the Player sidebar ---
 const PLAYER_NAV_ITEMS = [
-    { key: 'overview', label: 'My Dashboard', icon: '⚽' },
-    { key: 'profile', label: 'Manage Profile', icon: '👤' },
-    { key: 'apply', label: 'Apply for Trial', icon: '📝' },
-    { key: 'schedule', label: 'View Schedule', icon: '🗓️' },
-    { key: 'results', label: 'View Results', icon: '📈' },
+    { key: 'overview', label: 'My Dashboard', icon: <LayoutDashboard size={18} /> },
+    { key: 'profile', label: 'Manage Profile', icon: <User size={18} /> },
+    { key: 'apply', label: 'Apply for Trial', icon: <CheckSquare size={18} /> },
+    { key: 'schedule', label: 'View Schedule', icon: <Calendar size={18} /> },
 ];
 
 
 export default function PlayerDashboard() {
     const [activeFeature, setActiveFeature] = useState('overview');
     const navigate = useNavigate();
-    const { logout } = useAuth(); 
+    const { logout } = useAuth(); // Get logout function from context
 
     const handleLogout = async () => {
         try {
@@ -55,17 +56,16 @@ export default function PlayerDashboard() {
         }
     };
 
+    // --- renderContent ---
     const renderContent = () => {
         // Render content based on selected feature
         switch (activeFeature) {
             case 'profile':
                 return <PlayerProfile />;
             case 'apply':
-                return <TrialApplication />;
+                return <TrialApplication />; // This will now show the new component
             case 'schedule':
                 return <PlayerSchedule />;
-            case 'results':
-                return <TrialResults />;
             case 'overview':
             default:
                 return <PlayerOverview />; 
@@ -74,35 +74,35 @@ export default function PlayerDashboard() {
 
     const currentTitle = PLAYER_NAV_ITEMS.find(item => item.key === activeFeature)?.label || 'Player Dashboard';
 
-    const LogoutButton = (
-        <div style={{ padding: '10px 20px', borderTop: '1px solid #e0e0e0' }}>
-            <button 
-                onClick={handleLogout}
-                style={{
-                    width: '100%',
-                    padding: '10px',
-                    backgroundColor: '#0072ff', // Blue logout button for Player
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    transition: 'background-color 0.2s'
-                }}
-            >
-                🚪 Logout
-            </button>
-        </div>
-    );
-
+    // This dashboard uses the same layout but passes its own logout handler
     return (
         <DashboardLayout 
             title={currentTitle} 
             navItems={PLAYER_NAV_ITEMS} 
             activeFeature={activeFeature}
             setActiveFeature={setActiveFeature}
-            sidebarFooter={LogoutButton} 
+            onLogout={handleLogout} // <-- Pass the logout function to the layout
         >
+            {/* We must also override the sidebar header and logout button colors 
+                to match the player theme (Blue/Teal) instead of the admin theme (Yellow/Red)
+            */}
+            <style>
+                {`
+                    .${styles.sidebarHeader} {
+                        color: #30D5C8; /* Teal */
+                    }
+                    .${styles.activeNavItem} {
+                        background-color: #0072ff; /* Blue */
+                        border-left: 5px solid #30D5C8;
+                    }
+                    .${styles.logoutButton} {
+                        background-color: #0072ff; /* Blue */
+                    }
+                    .${styles.logoutButton}:hover {
+                        background-color: #005bb7;
+                    }
+                `}
+            </style>
             {renderContent()}
         </DashboardLayout>
     );

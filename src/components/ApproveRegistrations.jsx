@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-// Assuming '../firebase' correctly exports all necessary Firestore functions
+// 1. Import 'doc' and 'updateDoc' from the central firebase file
 import { collection, query, where, onSnapshot, updateDoc, doc } from '../firebase'; 
 
 // Simple styling (kept local)
@@ -18,61 +18,93 @@ function ApproveRegistrations() {
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [statusMessage, setStatusMessage] = useState('');
 
+    // --- PATHS ---
+    const collectionPath = `artifacts/${appId}/admin/data/pending_applications`;
+    const usersCollectionPath = `artifacts/${appId}/public/data/users`; // Path to main user profiles
+
     useEffect(() => {
-        // 1. Initial Check: Return if context data is still loading or missing
-        // This prevents running Firestore logic before everything is ready.
+        // Initial Check
         if (isLoading || !db || !appId) {
             setIsDataLoading(true);
             return;
         }
         
-        // 2. Role Check: Stop the listener setup if the user isn't an admin
-        // We still need the check later, but here we prevent unnecessary database calls.
+        // Role Check
         if (userRole !== 'admin') {
             setIsDataLoading(false);
             return; 
         }
 
-        // Collection Path: Centralized collection for pending applications
-        const masterApplicationsCollectionRef = collection(db, `artifacts/${appId}/admin/pending_applications`);
-
-        // Query: Filter applications where status is 'Pending Review'
+        const masterApplicationsCollectionRef = collection(db, collectionPath);
         const q = query(masterApplicationsCollectionRef, where("status", "==", "Pending Review"));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const applications = [];
             snapshot.forEach((doc) => {
-                applications.push({ id: doc.id, ...doc.data() });
+                // Ensure the application has a userId before adding
+                if (doc.data().userId) { 
+                    applications.push({ id: doc.id, ...doc.data() });
+                } else {
+                    console.warn("Found pending application without a userId:", doc.id);
+                }
             });
             setPendingApplications(applications);
             setIsDataLoading(false);
         }, (error) => {
             console.error("Error fetching pending applications:", error);
             setIsDataLoading(false);
-            // This message covers both Index errors and Rule errors
             setStatusMessage("Failed to load applications. Check Firestore rules/index.");
         });
 
         // Cleanup listener on component unmount
         return () => unsubscribe();
         
-    }, [db, appId, userRole, isLoading]); // Dependency array: Re-run when these change
+    }, [db, appId, userRole, isLoading, collectionPath]); 
 
-    const handleAction = async (docId, status) => {
+    // --- UPDATED handleAction ---
+    const handleAction = async (applicationId, status) => {
         if (!db || !appId) {
             setStatusMessage("Error: Database connection not ready.");
             return;
         }
+
+        // Find the specific application data in the current state
+        const application = pendingApplications.find(app => app.id === applicationId);
+        if (!application || !application.userId) {
+             setStatusMessage("Error: Could not find application data or user ID.");
+             console.error("Missing application data for ID:", applicationId, application);
+             return;
+        }
         
-        // Doc Path: Update the document in the centralized admin collection
-        const docRef = doc(db, `artifacts/${appId}/admin/pending_applications`, docId);
+        const applicationDocRef = doc(db, collectionPath, applicationId);
+        const userDocRef = doc(db, usersCollectionPath, application.userId); // Reference to the main user profile
 
         try {
-            await updateDoc(docRef, { status: status, reviewDate: new Date() });
-            setStatusMessage(`Application ${docId} set to ${status}.`);
+            // 1. Update the application document status
+            await updateDoc(applicationDocRef, { 
+                status: status, 
+                reviewDate: new Date() 
+            });
+            setStatusMessage(`Application ${applicationId} status set to ${status}.`);
+
+            // 2. --- NEW: If approved, update the main user profile ---
+            if (status === 'Approved') {
+                try {
+                    await updateDoc(userDocRef, {
+                        role: 'player', // Grant the player role
+                        status: 'Approved', // Optional: add an approval status field
+                        approvedDate: new Date()
+                    });
+                    setStatusMessage(`Application ${applicationId} Approved. Player role granted to user ${application.userId}.`);
+                } catch (profileError) {
+                    console.error(`Error updating user profile ${application.userId}:`, profileError);
+                    // Rollback application status? Or just show error? For now, show error.
+                    setStatusMessage(`Application ${applicationId} status updated, but FAILED to grant player role: ${profileError.message}`);
+                }
+            }
             
-            // NOTE: If status is 'Approved', you would typically trigger another action here
-            // like creating a final user profile/roster entry and removing the pending application.
+            // Optional: Consider deleting the application document after processing
+            // await deleteDoc(applicationDocRef);
 
         } catch (error) {
             console.error(`Error updating status to ${status}:`, error);
@@ -81,13 +113,10 @@ function ApproveRegistrations() {
     };
 
     // --- RENDER CHECKS ---
-    
-    // Show a loading state until context is resolved
     if (isLoading || isDataLoading) {
         return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Admin Panel...</div>;
     }
     
-    // Show permission denied ONLY after loading is complete and role is confirmed not 'admin'
     if (userRole !== 'admin') {
         return <div style={{ padding: '40px', textAlign: 'center', color: '#dc3545' }}>Permission Denied. Must be an Admin. (Current Role: {userRole})</div>;
     }
@@ -98,7 +127,14 @@ function ApproveRegistrations() {
             <h2>✔️ Approve Player Registrations</h2>
             
             {statusMessage && (
-                <p style={{ color: statusMessage.includes('Failed') ? 'red' : 'green', fontWeight: 'bold' }}>
+                <p style={{ 
+                    padding: '10px', 
+                    borderRadius: '5px', 
+                    fontWeight: 'bold',
+                    color: statusMessage.includes('Failed') || statusMessage.includes('Error') ? '#721c24' : '#155724',
+                    backgroundColor: statusMessage.includes('Failed') || statusMessage.includes('Error') ? '#f8d7da' : '#d4edda',
+                    border: `1px solid ${statusMessage.includes('Failed') || statusMessage.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`
+                 }}>
                     {statusMessage}
                 </p>
             )}
@@ -113,7 +149,7 @@ function ApproveRegistrations() {
                 <table style={tableStyle}>
                     <thead>
                         <tr style={{ backgroundColor: '#fffbe6' }}>
-                            <th style={tableHeaderStyle}>User ID</th>
+                            <th style={tableHeaderStyle}>Applicant Email</th> 
                             <th style={tableHeaderStyle}>Sport</th>
                             <th style={tableHeaderStyle}>DOB</th>
                             <th style={tableHeaderStyle}>Action</th>
@@ -122,7 +158,7 @@ function ApproveRegistrations() {
                     <tbody>
                         {pendingApplications.map((player) => (
                             <tr key={player.id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={tableCellStyle}>{player.userId?.substring(0, 8)}...</td>
+                                <td style={tableCellStyle}>{player.email || 'No Email Provided'}</td> 
                                 <td style={tableCellStyle}>{player.sport}</td>
                                 <td style={tableCellStyle}>{player.dob}</td>
                                 <td style={tableCellStyle}>

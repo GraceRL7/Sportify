@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import DashboardLayout from '../components/DashboardLayout'; // Correct path: src/pages -> src/components
-import { useAuth } from '../context/AuthContext'; // Correct path: src/pages -> src/context/
+// C:\sportify\src\pages\CoachDashboard.jsx (Firebase Connected)
 
-// Imports for Coach-specific features (from src/components/)
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import DashboardLayout from '../components/DashboardLayout'; 
+import { useAuth } from '../context/AuthContext'; 
+import { db, collection, query, where, onSnapshot } from '../firebase'; // Import Firestore tools
+import { LogOut, List, Edit, Calendar, Upload } from 'lucide-react'; // Import icons
+
+// Imports for Coach-specific features
 import PlayerList from '../components/PlayerList'; 
 import PlayerEvaluation from '../components/PlayerEvaluation'; 
 import PlayerSchedule from '../components/PlayerSchedule'; 
@@ -11,55 +15,87 @@ import UploadTrialResults from '../components/UploadTrialResults';
 
 // Define navigation items for the Coach sidebar
 const COACH_NAV_ITEMS = [
-    { key: 'overview', label: 'Coach Overview', icon: '📊' },
-    { key: 'roster', label: 'Player List', icon: '👥' },
-    { key: 'evaluate', label: 'Evaluate Players', icon: '📝' },
-    { key: 'schedule', label: 'View Schedule', icon: '🗓️' },
-    { key: 'upload', label: 'Upload Results', icon: '⬆️' },
+    { key: 'overview', label: 'Coach Overview', icon: <List size={18} /> },
+    { key: 'roster', label: 'Player List', icon: <List size={18} /> },
+    { key: 'evaluate', label: 'Evaluate Players', icon: <Edit size={18} /> },
+    { key: 'schedule', label: 'View Schedule', icon: <Calendar size={18} /> },
+    { key: 'upload', label: 'Upload Results', icon: <Upload size={18} /> },
 ];
 
-// --- Placeholder Content Components ---
-const CoachOverview = () => (
-    <div style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
-        <h2 style={{ color: '#28a745', borderBottom: '2px solid #28a745', paddingBottom: '10px' }}>
-            Welcome, Coach!
-        </h2>
-        <p style={{ fontSize: '1.1em', color: '#555', marginTop: '20px' }}>
-            Welcome to your **Sportify Coach Panel**. Use the sidebar to manage player evaluations, view trial schedules, and upload final results.
-        </p>
-        <div style={{ marginTop: '30px', padding: '25px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#e9f7ff' }}>
-            <h3 style={{ color: '#20143b' }}>Quick Access</h3>
-            <p><strong>Assigned Players:</strong> 12</p>
-            <p><strong>Pending Evaluations:</strong> 3</p>
-            <p style={{ fontSize: '0.9em', color: '#666', marginTop: '15px' }}>
-                *Note: Feature components are ready to be implemented.*
+// --- NEW: Dynamic CoachOverview Component ---
+const CoachOverview = () => {
+    const { userProfile, isLoading, db, appId } = useAuth(); // Get profile and db from context
+    const [playerCount, setPlayerCount] = useState('...');
+    const [assignedSport, setAssignedSport] = useState('Unassigned');
+
+    useEffect(() => {
+        if (isLoading || !userProfile || !db) return;
+
+        // 1. Set the coach's assigned sport from their profile
+        if (userProfile.assignedSport) {
+            setAssignedSport(userProfile.assignedSport);
+
+            // 2. Count players for that sport
+            const rosterRef = collection(db, `artifacts/${appId}/public/data/roster`);
+            const q = query(
+                rosterRef,
+                where("status", "==", "Approved"),
+                where("sport", "==", userProfile.assignedSport)
+            );
+
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                setPlayerCount(snapshot.size);
+            }, (error) => {
+                console.error("Error counting players: ", error);
+                setPlayerCount('Error');
+            });
+
+            return () => unsubscribe();
+
+        } else {
+            setAssignedSport('Unassigned');
+            setPlayerCount(0);
+        }
+    }, [userProfile, isLoading, db, appId]);
+    
+    if (isLoading) {
+        return <p>Loading coach profile...</p>;
+    }
+
+    return (
+        <div style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
+            <h2 style={{ color: '#28a745', borderBottom: '2px solid #28a745', paddingBottom: '10px' }}>
+                Welcome, Coach {userProfile?.name || userProfile?.email}!
+            </h2>
+            <p style={{ fontSize: '1.1em', color: '#555', marginTop: '20px' }}>
+                This is your **Sportify Coach Panel**. Use the sidebar to manage player evaluations, view schedules, and upload results.
             </p>
+            <div style={{ marginTop: '30px', padding: '25px', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#e9f7ff' }}>
+                <h3 style={{ color: '#20143b' }}>Your Roster Details</h3>
+                <p><strong>Your Email:</strong> {userProfile?.email}</p>
+                <p><strong>Assigned Sport:</strong> 
+                    <strong style={{ color: assignedSport === 'Unassigned' ? 'red' : 'green' }}>
+                        {` ${assignedSport}`}
+                    </strong>
+                </p>
+                <p><strong>Approved Players in Roster:</strong> 
+                    <strong>{` ${playerCount}`}</strong>
+                </p>
+            </div>
         </div>
-    </div>
-);
-
-// Generic Placeholder (used only if a feature component is missing)
-const PlaceholderFeature = ({ featureName }) => (
-    <div style={{ padding: '40px', textAlign: 'center' }}>
-        <h2 style={{ color: '#007bff' }}>{featureName} Feature</h2>
-        <p>This content area is ready for the **{featureName}** component.</p>
-    </div>
-);
-// --- End Placeholder Components ---
-
+    );
+};
+// --- End of new CoachOverview Component ---
 
 export default function CoachDashboard() {
     const [activeFeature, setActiveFeature] = useState('overview');
     const navigate = useNavigate();
-    
-    // 1. Retrieve the logout function from AuthContext
     const { logout } = useAuth(); 
 
-    // 2. Define the local handler for logout and redirection
     const handleLogout = async () => {
         try {
-            await logout(); // Call the central Firebase sign-out
-            navigate('/'); // Redirect to the main login selector page
+            await logout(); 
+            navigate('/'); 
         } catch (error) {
             console.error("Coach Logout failed:", error);
             navigate('/'); 
@@ -67,7 +103,6 @@ export default function CoachDashboard() {
     };
 
     const renderContent = () => {
-        // Map navigation key to component
         switch(activeFeature) {
             case 'roster':
                 return <PlayerList />; 
@@ -79,13 +114,12 @@ export default function CoachDashboard() {
                 return <UploadTrialResults />; 
             case 'overview':
             default:
-                return <CoachOverview />;
+                return <CoachOverview />; // Now renders the dynamic component
         }
     };
 
     const currentTitle = COACH_NAV_ITEMS.find(item => item.key === activeFeature)?.label || 'Coach Dashboard';
 
-    // 3. Define the Logout Button JSX 
     const LogoutButton = (
         <div style={{ padding: '10px 20px', borderTop: '1px solid #e0e0e0' }}>
             <button 
@@ -102,7 +136,7 @@ export default function CoachDashboard() {
                     transition: 'background-color 0.2s'
                 }}
             >
-                🚪 Logout
+                <LogOut size={16} style={{ marginRight: '5px' }} /> Logout
             </button>
         </div>
     );
@@ -113,7 +147,6 @@ export default function CoachDashboard() {
             navItems={COACH_NAV_ITEMS} 
             activeFeature={activeFeature}
             setActiveFeature={setActiveFeature}
-            // 4. Pass the Logout Button JSX to the DashboardLayout sidebar footer
             sidebarFooter={LogoutButton} 
         >
             {renderContent()}

@@ -8,19 +8,31 @@ function PlayerList() {
     const [isDataLoading, setIsDataLoading] = useState(true);
 
     useEffect(() => {
-        if (isLoading || userRole !== 'coach' || !db) return;
+        if (isLoading || userRole !== 'coach' || !db || !appId) {
+             setIsDataLoading(false); // Stop loading if prerequisites aren't met
+            return;
+        }
 
-        // Collection Path: Assuming Approved Players are listed in a centralized,
-        // publicly accessible 'roster' collection for coaches and admins.
-        const rosterCollectionRef = collection(db, `artifacts/${appId}/public/data/roster`);
+        // Collection Path: Use the standard user profile path
+        const usersCollectionRef = collection(db, `artifacts/${appId}/public/data/users`);
         
-        // Query: Filter only players whose status is explicitly 'Approved'
-        const q = query(rosterCollectionRef, where("status", "==", "Approved"));
+        // Query: Filter only users with the 'player' role 
+        // Note: We're fetching all players, not checking an 'approved' status here.
+        // We assume only approved players have the 'player' role set correctly.
+        const q = query(usersCollectionRef, where("role", "==", "player"));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const players = [];
             snapshot.forEach((doc) => {
-                players.push({ id: doc.id, ...doc.data() });
+                // Include name and email directly from the user profile document
+                players.push({ 
+                    id: doc.id, 
+                    name: doc.data().name || 'No Name Set', 
+                    email: doc.data().email, 
+                    sport: doc.data().sport || 'N/A', 
+                    // Consider adding coach assignment if available:
+                    // assignedCoach: doc.data().assignedCoach || 'Unassigned' 
+                });
             });
             setRoster(players);
             setIsDataLoading(false);
@@ -43,26 +55,30 @@ function PlayerList() {
 
     // --- Render Content ---
     return (
-        <div style={{ padding: '20px', maxWidth: '600px', margin: '20px auto', backgroundColor: 'white', borderRadius: '8px' }}>
+        <div style={{ padding: '20px', maxWidth: '700px', margin: '20px auto', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
             <h2>👥 Registered Players ({roster.length})</h2>
             
             {roster.length === 0 ? (
-                <p style={{ fontStyle: 'italic', color: '#666' }}>No approved players found in the roster.</p>
+                <p style={{ fontStyle: 'italic', color: '#666' }}>No players found in the system.</p>
             ) : (
                 <table style={tableStyle}>
                     <thead>
                         <tr style={{ backgroundColor: '#f0f0f0' }}>
-                            <th style={tableHeaderStyle}>ID (Partial)</th>
+                            {/* Updated Columns */}
+                            <th style={tableHeaderStyle}>Name</th>
+                            <th style={tableHeaderStyle}>Email</th>
                             <th style={tableHeaderStyle}>Sport</th>
-                            <th style={tableHeaderStyle}>Coach</th>
+                            {/* <th style={tableHeaderStyle}>Assigned Coach</th> */}
                         </tr>
                     </thead>
                     <tbody>
                         {roster.map((player) => (
                             <tr key={player.id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={tableCellStyle}>{player.id.substring(0, 8)}...</td>
-                                <td style={tableCellStyle}>{player.sport || 'N/A'}</td>
-                                <td style={tableCellStyle}>{player.assignedCoach || 'Unassigned'}</td>
+                                {/* Updated Data Display */}
+                                <td style={tableCellStyle}>{player.name}</td>
+                                <td style={tableCellStyle}>{player.email}</td>
+                                <td style={tableCellStyle}>{player.sport}</td>
+                                {/* <td style={tableCellStyle}>{player.assignedCoach || 'Unassigned'}</td> */}
                             </tr>
                         ))}
                     </tbody>

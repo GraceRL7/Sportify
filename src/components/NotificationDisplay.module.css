@@ -1,0 +1,75 @@
+/* src/components/NotificationDisplay.module.css */
+
+.notificationContainer {
+    position: fixed; /* Keep it fixed on screen */
+    top: 20px;       /* Position from the top */
+    right: 20px;      /* Position from the right */
+    z-index: 1000;    /* Ensure it's above other content */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;        /* Spacing between multiple notifications */
+    max-width: 350px; /* Limit width */
+}
+
+.notification {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    color: #fff;      /* Default text color */
+    opacity: 0.95;
+    transition: opacity 0.3s ease; /* Fade effect (optional) */
+}
+
+.icon {
+    margin-right: 10px;
+    flex-shrink: 0; /* Prevent icon from shrinking */
+    display: flex; /* Helps center icon if needed */
+    align-items: center;
+}
+
+.message {
+    flex-grow: 1; /* Take remaining space */
+    font-size: 0.95em;
+    line-height: 1.4;
+    margin-right: 10px; /* Space before close button */
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    color: inherit; /* Use notification text color */
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    flex-shrink: 0;
+}
+
+.closeButton:hover {
+    opacity: 1;
+}
+
+/* --- Color Themes --- */
+
+.success {
+    background-color: #28a745; /* Green */
+}
+
+.error {
+    background-color: #dc3545; /* Red */
+}
+
+.warning {
+    background-color: #ffc107; /* Yellow/Orange */
+    color: #333; /* Darker text for yellow */
+}
+/* Adjust close button for warning */
+.warning .closeButton {
+    color: #333;
+}
+
+.info {
+    background-color: #17a2b8; /* Teal/Blue */
+}

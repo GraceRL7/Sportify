@@ -12,7 +12,8 @@ import {
   getDoc
 } from 'firebase/firestore';
 
-// 🎯 CRITICAL FIX: Import centralized instances
+// 1. Import useAuth
+import { useAuth } from '../context/AuthContext';
 import { auth, db, appId } from '../firebase';
 
 
@@ -34,6 +35,9 @@ const USER_PROFILE_COLLECTION = `artifacts/${FIREBASE_APP_ID}/public/data/users`
 
 const PlayerLogin = () => {
   const navigate = useNavigate();
+  // 2. Get setters from useAuth
+  const { setUserProfile, setUserRole } = useAuth();
+
   const [isSignUp, setIsSignUp] = useState(false); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -86,9 +90,14 @@ const PlayerLogin = () => {
       const userDocSnap = await getDoc(userDocRef);
 
       const userRole = userDocSnap.data()?.role;
+      const userData = userDocSnap.data();
 
       // Accept either 'player' or the original 'user' role
       if (userDocSnap.exists() && (userRole === 'player' || userRole === 'user')) { 
+        // 3. SET GLOBAL STATE on success
+        setUserProfile(userData);
+        setUserRole(userRole);
+        
         setSuccessMessage('Login successful!');
         // Navigation path matches App.jsx route
         navigate('/player-dashboard'); 
@@ -141,11 +150,17 @@ const PlayerLogin = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // --- 4. CREATE FULL PROFILE ON SIGNUP ---
       // Create the profile in the complex, nested path
       await setDoc(doc(db, USER_PROFILE_COLLECTION, user.uid), {
         email: user.email,
         role: 'player', // Assign 'player' role
         createdAt: new Date(),
+        name: '', // Initialize new fields as empty
+        phoneNumber: '',
+        sport: '',
+        dob: '',
+        achievements: [] // Initialize achievements array
       });
 
       setSuccessMessage('Account created successfully! Please log in.');

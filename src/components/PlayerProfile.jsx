@@ -1,38 +1,21 @@
 import React, { useState, useEffect } from 'react';
+// 1. Import useAuth to get the *correct* context values
 import { useAuth } from '../context/AuthContext';
-import { 
-    initializeApp, getApps, getApp
-} from 'firebase/app';
-import {
-    getFirestore, doc, updateDoc 
-} from 'firebase/firestore';
+// 2. Import functions from the central firebase file
+import { doc, updateDoc } from 'firebase/firestore';
 
-// --- Firebase Configuration copied from AdminLogin.jsx for standalone use ---
-const firebaseConfig = {
-    apiKey: "AIzaSyAzkQJo_aAcs1jvj4VOgzFksINuur9uvb8",
-    authDomain: "sportify-df84b.firebaseapp.com",
-    projectId: "sportify-df84b",
-    storageBucket: "sportify-df84b.firebasestorage.app",
-    messagingSenderId: "125792303495",
-    appId: "1:125792303495:web:8944023fee1e655eee7b22",
-    measurementId: "G-ZBMG376GBS"
-};
-const appName = 'sportify'; 
-const app = getApps().some(a => a.name === appName) ? getApp(appName) : initializeApp(firebaseConfig, appName);
-const db = getFirestore(app);
-const FIREBASE_APP_ID = firebaseConfig.appId;
-// --- End Temporary Firebase Setup ---
+// 3. --- REMOVED separate Firebase initialization ---
+// We will get 'db' and 'appId' from the useAuth() hook.
 
 
 const PlayerProfile = () => {
-    // Assuming useAuth provides userId, userProfile (the Firestore document data)
-    const { currentUser, userProfile, isLoading } = useAuth();
+    // 4. Get the CORRECT values from context (user is lowercase)
+    const { user, userProfile, isLoading, db, appId } = useAuth();
     
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         phoneNumber: '',
-        // Include sport from the existing profile data, but make it read-only
         sport: ''
     });
     const [achievements, setAchievements] = useState([]);
@@ -42,19 +25,20 @@ const PlayerProfile = () => {
 
     // Populate form fields and achievements when userProfile loads
     useEffect(() => {
-        if (userProfile && currentUser) {
+        // 5. Check for 'user' (lowercase)
+        if (userProfile && user) {
             setFormData({
                 name: userProfile.name || '',
-                email: currentUser.email || '', // Use Auth email as primary email
+                email: user.email || '', // Use Auth email as primary email
                 phoneNumber: userProfile.phoneNumber || '',
                 sport: userProfile.sport || 'N/A'
             });
             setAchievements(userProfile.achievements || []);
         }
-    }, [userProfile, currentUser]);
+    }, [userProfile, user]);
 
-    // Construct the path to the user's Firestore document
-    const userDocPath = `artifacts/${FIREBASE_APP_ID}/public/data/users/${currentUser?.uid}`;
+    // 6. Construct the path using context values
+    const userDocPath = `artifacts/${appId}/public/data/users/${user?.uid}`;
 
 
     const handleFormChange = (e) => {
@@ -69,18 +53,18 @@ const PlayerProfile = () => {
         setMessage(null);
         setLoading(true);
 
-        if (!currentUser || !currentUser.uid) {
+        if (!user || !user.uid || !db) {
             setMessage({ type: 'error', text: 'Error: User not authenticated.' });
             setLoading(false);
             return;
         }
 
         try {
+            // 7. Use the 'db' instance from the context
             const docRef = doc(db, userDocPath);
             await updateDoc(docRef, {
                 name: formData.name,
                 phoneNumber: formData.phoneNumber,
-                // Note: Email changes should typically be handled via Firebase Auth, not Firestore update
             });
             setMessage({ type: 'success', text: 'Personal details updated successfully!' });
         } catch (error) {
@@ -99,10 +83,15 @@ const PlayerProfile = () => {
             setMessage({ type: 'error', text: 'Achievement title and year are required.' });
             return;
         }
+        if (!user || !user.uid || !db) {
+            setMessage({ type: 'error', text: 'Error: User not authenticated.' });
+            return;
+        }
 
         const updatedAchievements = [...achievements, newAchievement];
 
         try {
+            // 8. Use the 'db' instance from the context
             const docRef = doc(db, userDocPath);
             await updateDoc(docRef, {
                 achievements: updatedAchievements,
@@ -121,7 +110,9 @@ const PlayerProfile = () => {
     if (isLoading) {
         return <div style={{ padding: '40px', textAlign: 'center' }}>Loading profile data...</div>;
     }
-    if (!currentUser) {
+
+    // 9. This check is now against 'user' (lowercase)
+    if (!user) {
         return <div style={{ padding: '40px', textAlign: 'center', color: '#dc3545' }}>Please log in to view your profile.</div>;
     }
 
@@ -230,7 +221,7 @@ const PlayerProfile = () => {
                         required
                         style={{...inputStyle, maxWidth: '100px'}}
                     />
-                    <button type="submit" style={{...buttonStyle, backgroundColor: '#28a745', flexShrink: 0}}>
+                    <button type="submit" style={{...buttonStyle, backgroundColor: '#28a745', flexShrink: 0, marginTop: 0}}>
                         Add
                     </button>
                 </form>

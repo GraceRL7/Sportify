@@ -12,20 +12,23 @@ import {
 } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 
-// 🎯 CRITICAL PATH FIX: Reverting to single level up (../firebase)
+// 1. Import useAuth
+import { useAuth } from '../context/AuthContext';
 import { auth, db, appId } from '../firebase'; 
 
 
 // --- COACH-SPECIFIC CONSTANTS ---
 const TARGET_ROLE = 'coach';
 const FIREBASE_APP_ID = appId; 
-// STANDARD PROFILE PATH: Use the path your app is built around
 const USER_PROFILE_COLLECTION = `artifacts/${FIREBASE_APP_ID}/public/data/users`; 
 // --------------------------------
 
 
-const CoachLogin = () => { // Renamed from PlayerLogin
+const CoachLogin = () => {
   const navigate = useNavigate();
+  // 2. Get setters from useAuth
+  const { setUserProfile, setUserRole } = useAuth();
+
   const [isSignUp, setIsSignUp] = useState(false); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -73,16 +76,19 @@ const CoachLogin = () => { // Renamed from PlayerLogin
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Check the complex, nested path
       const userDocRef = doc(db, USER_PROFILE_COLLECTION, user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       const userRole = userDocSnap.data()?.role;
+      const userData = userDocSnap.data();
 
-      // 🎯 LOGIN CHANGE: Check only for the 'coach' role
+      // Check only for the 'coach' role
       if (userDocSnap.exists() && userRole === TARGET_ROLE) { 
+        // 3. SET GLOBAL STATE on success
+        setUserProfile(userData);
+        setUserRole(userRole);
+        
         setSuccessMessage('Login successful!');
-        // 🎯 NAVIGATION CHANGE
         navigate('/coach-dashboard'); 
       } else {
         setError('Invalid credentials or unauthorized role. Please check your email and password.');
@@ -133,7 +139,7 @@ const CoachLogin = () => { // Renamed from PlayerLogin
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 🎯 SIGNUP CHANGE: Create the profile with 'coach' role
+      // Create the profile with 'coach' role
       await setDoc(doc(db, USER_PROFILE_COLLECTION, user.uid), {
         email: user.email,
         role: TARGET_ROLE, // Assign 'coach' role

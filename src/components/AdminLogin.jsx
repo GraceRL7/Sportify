@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// 🎯 CRITICAL FIX: Import centralized instances
+// 1. Import useAuth
+import { useAuth } from '../context/AuthContext';
 import {
   auth,
   db,
@@ -8,8 +9,8 @@ import {
   signOut,
   doc,
   getDoc,
-  appId as FIREBASE_APP_ID // Import shared app ID
-} from '../firebase'; // 🎯 ADJUSTED PATH: Trying '../../firebase' to resolve compiler error
+  appId as FIREBASE_APP_ID
+} from '../firebase'; 
 
 // --- Configuration (Retained for constants only) ---
 const firebaseConfig = {
@@ -24,11 +25,12 @@ const firebaseConfig = {
 
 // --- Component Configuration ---
 const TARGET_ROLE = 'admin';
-
 const USER_COLLECTION = `artifacts/${FIREBASE_APP_ID}/public/data/users`; 
 
 const AdminLogin = () => {
   const navigate = useNavigate(); 
+  // 2. Get setters from useAuth
+  const { setUserProfile, setUserRole } = useAuth();
   
   const [email, setEmail] = useState('admin@sportify.com'); 
   const [password, setPassword] = useState('admin12@'); 
@@ -62,10 +64,14 @@ const AdminLogin = () => {
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
         
-        // Authorization check: Must have the correct role stored in Firestore
+        // Authorization check
         isAuthorized = userData.role === TARGET_ROLE;
         
-        if (!isAuthorized) {
+        if (isAuthorized) {
+            // 3. SET GLOBAL STATE on success
+            setUserProfile(userData);
+            setUserRole(userData.role);
+        } else {
             console.log(`Authorization Failed: User role is '${userData.role}', expected '${TARGET_ROLE}'.`);
         }
       } else {
@@ -78,8 +84,8 @@ const AdminLogin = () => {
         navigate('/admin/dashboard');
  
       } else {
-        // If authenticated but not authorized as admin, sign out.
-        await signOut(auth);
+        // If authenticated but not authorized, sign out.
+        await signOut(auth); // This will trigger context listener to clear user
         setError('Access Denied: You do not have administrator privileges.');
       }
 

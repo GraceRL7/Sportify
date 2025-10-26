@@ -1,47 +1,21 @@
-// C:\sportify\src\components\ManageTrials.jsx
+// C:\sportify\src\components\ManageTrials.jsx (Corrected)
 
 import React, { useState, useEffect } from 'react';
+// 1. Import useAuth to get the authenticated user and db
 import { useAuth } from '../context/AuthContext'; 
-import { 
-    initializeApp,
-    getApps,
-    getApp
-} from 'firebase/app'; 
+// 2. Import ALL firestore functions from your central firebase.js file
 import { 
     collection, 
     addDoc, 
     query, 
     onSnapshot,
-    getFirestore
-} from 'firebase/firestore'; 
-
-// --- Temporary Firebase Setup (Copied from AdminLogin.jsx for standalone use) ---
-const firebaseConfig = {
-    apiKey: "AIzaSyAzkQJo_aAcs1jvj4VOgzFksINuur9uvb8",
-    authDomain: "sportify-df84b.firebaseapp.com",
-    projectId: "sportify-df84b",
-    storageBucket: "sportify-df84b.firebasestorage.app",
-    messagingSenderId: "125792303495",
-    appId: "1:125792303495:web:8944023fee1e655eee7b22",
-    measurementId: "G-ZBMG376GBS"
-};
-const appName = 'sportify'; 
-const app = getApps().some(a => a.name === appName) ? getApp(appName) : initializeApp(firebaseConfig, appName);
-const db = getFirestore(app);
-const FIREBASE_APP_ID = firebaseConfig.appId;
-// --- End Temporary Firebase Setup ---
-
-// Define the collection path for trials
-const TRIALS_COLLECTION_PATH = `artifacts/${FIREBASE_APP_ID}/public/data/trials`;
-
-// Mock data for coaches (used for assignment dropdown)
-const mockCoaches = [
-    { id: '301', name: 'Coach Mark Johnson', sport: 'Football' },
-    { id: '302', name: 'Coach Emma Davis', sport: 'Basketball/Cricket' },
-    { id: '303', name: 'Coach Alex Vales', sport: 'Football/Basketball' },
-];
+    where 
+} from '../firebase'; 
 
 function ManageTrials() {
+    // 3. Get authenticated context (db and userRole will now be correct)
+    const { db, appId, userRole, isLoading } = useAuth();
+
     const [trials, setTrials] = useState([]);
     const [formData, setFormData] = useState({
         date: '',
@@ -50,29 +24,56 @@ function ManageTrials() {
         coachId: '',
     });
     const [message, setMessage] = useState(null);
+    
+    const [coaches, setCoaches] = useState([]);
     const [isDataLoading, setIsDataLoading] = useState(true);
 
-    // --- EFFECT TO FETCH TRIALS FROM FIREBASE ---
+    // --- EFFECT TO FETCH TRIALS AND COACHES ---
     useEffect(() => {
-        const trialsCollectionRef = collection(db, TRIALS_COLLECTION_PATH);
-        
-        const unsubscribe = onSnapshot(trialsCollectionRef, (snapshot) => {
+        // 4. This check will now pass because useAuth provides all values
+        if (isLoading || !db || !appId || userRole !== 'admin') {
+            if (userRole !== 'admin' && !isLoading) {
+                setIsDataLoading(false);
+            }
+            return;
+        }
+
+        const TRIALS_COLLECTION_PATH = `artifacts/${appId}/public/data/trials`;
+        const COACHES_COLLECTION_PATH = `artifacts/${appId}/public/data/users`;
+
+        // 5. Fetch Trials (This will now work)
+        const trialsUnsub = onSnapshot(collection(db, TRIALS_COLLECTION_PATH), (snapshot) => {
             const fetchedTrials = [];
             snapshot.forEach((doc) => {
                 fetchedTrials.push({ id: doc.id, ...doc.data() });
             });
-            // Sort by date ascending
             fetchedTrials.sort((a, b) => new Date(a.date) - new Date(b.date));
             setTrials(fetchedTrials);
-            setIsDataLoading(false);
         }, (error) => {
             console.error("Error fetching trials:", error);
             setMessage({ type: "error", text: "Failed to load trials from database." });
+        });
+
+        // 6. Fetch REAL Coaches (This will also work)
+        const coachesQuery = query(collection(db, COACHES_COLLECTION_PATH), where("role", "==", "coach"));
+        const coachesUnsub = onSnapshot(coachesQuery, (snapshot) => {
+            const fetchedCoaches = [];
+            snapshot.forEach((doc) => {
+                fetchedCoaches.push({ id: doc.id, ...doc.data() });
+            });
+            setCoaches(fetchedCoaches);
+            setIsDataLoading(false); 
+        }, (error) => {
+            console.error("Error fetching coaches:", error);
+            setMessage({ type: "error", text: "Failed to load coaches list." });
             setIsDataLoading(false);
         });
 
-        return () => unsubscribe();
-    }, []); 
+        return () => {
+            trialsUnsub();
+            coachesUnsub();
+        };
+    }, [db, appId, userRole, isLoading]); // Add all context dependencies
 
     const handleChange = (e) => {
         setFormData({
@@ -85,7 +86,7 @@ function ManageTrials() {
         e.preventDefault();
         setMessage(null);
         
-        const selectedCoach = mockCoaches.find(c => c.id === formData.coachId);
+        const selectedCoach = coaches.find(c => c.id === formData.coachId);
         
         if (!selectedCoach) {
             setMessage({ type: 'error', text: 'Please select a valid coach.' });
@@ -97,12 +98,13 @@ function ManageTrials() {
             sport: formData.sport,
             location: formData.location,
             coachId: selectedCoach.id,
-            coachName: selectedCoach.name,
+            coachName: selectedCoach.name || selectedCoach.email, // Use name or email
             createdAt: new Date(),
         };
 
         try {
-            await addDoc(collection(db, TRIALS_COLLECTION_PATH), newTrialData);
+            const trialsCollectionRef = collection(db, `artifacts/${appId}/public/data/trials`);
+            await addDoc(trialsCollectionRef, newTrialData);
             
             setFormData({ date: '', sport: '', location: '', coachId: '' });
             setMessage({ type: 'success', text: `New trial for ${newTrialData.sport} successfully scheduled.` });
@@ -114,8 +116,19 @@ function ManageTrials() {
         setTimeout(() => setMessage(null), 5000);
     };
 
+    // 7. This (isLoading) comes from AuthContext
+    if (isLoading) {
+        return <div style={{ padding: '40px', textAlign: 'center' }}>Authenticating...</div>;
+    }
+    
+    // 8. This (userRole) comes from AuthContext and will now be 'admin'
+    if (userRole !== 'admin') {
+         return <div style={{ padding: '40px', textAlign: 'center', color: '#dc3545' }}>Permission Denied. Must be an Admin.</div>;
+    }
+
+    // 9. This (isDataLoading) is from the component's internal state
     if (isDataLoading) {
-        return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Trials Data...</div>;
+        return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Trials and Coach Data...</div>;
     }
 
     return (
@@ -193,8 +206,11 @@ function ManageTrials() {
                             style={inputStyle}
                         >
                             <option value="">-- Choose Coach --</option>
-                            {mockCoaches.map(coach => (
-                                <option key={coach.id} value={coach.id}>{coach.name}</option>
+                            {coaches.map(coach => (
+                                <option key={coach.id} value={coach.id}>
+                                    {coach.name || coach.email}
+                                    {coach.assignedSport ? ` (${coach.assignedSport})` : ''}
+                                </option>
                             ))}
                         </select>
                     </div>
@@ -217,12 +233,12 @@ function ManageTrials() {
                             <th style={tableHeaderStyle}>Date</th>
                             <th style={tableHeaderStyle}>Sport</th>
                             <th style={tableHeaderStyle}>Location</th>
-                            <th style={tableHeaderStyle}>Assigned Coach</th>
+                            <th style-={tableHeaderStyle}>Assigned Coach</th>
                         </tr>
                     </thead>
                     <tbody>
                         {trials.map((trial) => (
-                            <tr key={trial.id} style={{ borderBottom: '1px solid #eee' }}>
+                            <tr key={trial.id} style={{ borderBottom: '1.px solid #eee' }}>
                                 <td style={tableCellStyle}>{trial.date}</td>
                                 <td style={tableCellStyle}>{trial.sport}</td>
                                 <td style={tableCellStyle}>{trial.location}</td>
