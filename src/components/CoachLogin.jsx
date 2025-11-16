@@ -214,19 +214,29 @@ const CoachLogin = () => {
 
           /* Define Coach Green and secondary Player colors */
           :root {
-              --coach-green: #28a745; /* Success Green */
-              --coach-green-dark: #1e7e34;
-              --secondary-color: #20143b; /* Dark Blue (background) */
-              
-              --dark-text: #333333;
-              --medium-text: #555555;
-              --light-text: #777777;
-              --border-light: #e0e0e0;
-              --border-subtle: #eeeeee;
-              --clean-white: #ffffff;
-              --soft-light-grey: #f8f9fa;
-              --error-red: #dc3545;
-          }
+    --sportify-navy:   #354F60;
+    --sportify-red:    #BC0E4C;
+    --sportify-yellow: #FFC501;
+
+    --dark-text: #222222;
+    --border-light: #e0e0e0;
+    --clean-white: #ffffff;
+}
+
+/* Example main background + primary buttons */
+.login-container {
+    background-color: var(--sportify-navy);
+}
+
+.primary-button {
+    background-color: var(--sportify-yellow);
+    color: #333;
+}
+
+.primary-button:hover {
+    background-color: #e0b700;
+}
+
 
           body {
               font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;

@@ -1,7 +1,12 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-// 1. Import useAuth
+// C:\sportify\src\components\AdminLogin.jsx
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+// Get global auth context setters
 import { useAuth } from '../context/AuthContext';
+
+// Firebase helpers from your central firebase file
 import {
   auth,
   db,
@@ -9,33 +14,22 @@ import {
   signOut,
   doc,
   getDoc,
-  appId as FIREBASE_APP_ID
-} from '../firebase'; 
+  appId as FIREBASE_APP_ID,
+} from '../firebase';
 
-// --- Configuration (Retained for constants only) ---
-const firebaseConfig = {
-    apiKey: "AIzaSyAzkQJo_aAcs1jvj4VOgzFksINuur9uvb8",
-    authDomain: "sportify-df84b.firebaseapp.com",
-    projectId: "sportify-df84b",
-    storageBucket: "sportify-df84b.firebasestorage.app",
-    messagingSenderId: "125792303495",
-    appId: "1:125792303495:web:8944023fee1e655eee7b22",
-    measurementId: "G-ZBMG376GBS"
-};
-
-// --- Component Configuration ---
+// --- Admin-specific config ---
 const TARGET_ROLE = 'admin';
-const USER_COLLECTION = `artifacts/${FIREBASE_APP_ID}/public/data/users`; 
+const USER_COLLECTION = `artifacts/${FIREBASE_APP_ID}/public/data/users`;
 
 const AdminLogin = () => {
-  const navigate = useNavigate(); 
-  // 2. Get setters from useAuth
+  const navigate = useNavigate();
   const { setUserProfile, setUserRole } = useAuth();
-  
-  const [email, setEmail] = useState('admin@sportify.com'); 
-  const [password, setPassword] = useState('admin12@'); 
-  
-  const [error, setError] = useState("");
+
+  // Default admin credentials (you can change/remove)
+  const [email, setEmail] = useState('admin@sportify.com');
+  const [password, setPassword] = useState('admin12@');
+
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -49,53 +43,60 @@ const AdminLogin = () => {
       setLoading(false);
       return;
     }
-    
+
     try {
-      // 1. Authenticate user using Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // 1) Sign in with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
-      // 2. Lookup role using the authenticated user's UID
-      const userDocRef = doc(db, USER_COLLECTION, user.uid); 
+      // 2) Read profile from Firestore to check role
+      const userDocRef = doc(db, USER_COLLECTION, user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       let isAuthorized = false;
-      
+      let userData = null;
+
       if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        
-        // Authorization check
+        userData = userDocSnap.data();
         isAuthorized = userData.role === TARGET_ROLE;
-        
+
         if (isAuthorized) {
-            // 3. SET GLOBAL STATE on success
-            setUserProfile(userData);
-            setUserRole(userData.role);
+          // 3) Update global context + localStorage
+          setUserProfile(userData);
+          setUserRole(userData.role);
+          localStorage.setItem('role', userData.role);
+          localStorage.setItem('userId', user.uid);
         } else {
-            console.log(`Authorization Failed: User role is '${userData.role}', expected '${TARGET_ROLE}'.`);
+          console.log(
+            `Authorization failed: role is '${userData.role}', expected '${TARGET_ROLE}'.`
+          );
         }
       } else {
-          console.error("Authorization Failed: User profile document not found for UID:", user.uid);
+        console.error(
+          'Authorization failed: user profile document not found for UID:',
+          user.uid
+        );
       }
 
       if (isAuthorized) {
         console.log('Admin login successful for UID:', user.uid);
-        // Navigation path matches App.jsx route
         navigate('/admin/dashboard');
- 
       } else {
-        // If authenticated but not authorized, sign out.
-        await signOut(auth); // This will trigger context listener to clear user
-        setError('Access Denied: You do not have administrator privileges.');
+        // Authenticated but not an admin – sign out again
+        await signOut(auth);
+        setError(
+          'Access Denied: You do not have administrator privileges for this account.'
+        );
       }
-
     } catch (firebaseError) {
-      console.error("Firebase Login Error:", firebaseError);
+      console.error('Firebase Login Error:', firebaseError);
       let errorMessage = 'Login failed.';
+
       switch (firebaseError.code) {
-        case 'auth/configuration-not-found': 
-          errorMessage = 'Configuration Error: Firebase services failed to initialize.';
-          break;
         case 'auth/invalid-email':
         case 'auth/user-disabled':
         case 'auth/user-not-found':
@@ -104,12 +105,18 @@ const AdminLogin = () => {
           errorMessage = 'Invalid email or password.';
           break;
         case 'permission-denied':
-          errorMessage = 'Login failed: Insufficient permissions to check role.';
+          errorMessage =
+            'Login failed: Insufficient permissions to check role.';
+          break;
+        case 'auth/configuration-not-found':
+          errorMessage =
+            'Configuration error: Firebase services failed to initialize.';
           break;
         default:
           errorMessage = `Login failed: ${firebaseError.code}`;
           break;
       }
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -117,230 +124,221 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="admin-login-container">
+    <div className="admin-login-page">
       <style>
         {`
-          /* Embedded CSS (Matching Sportify design) */
-
           :root {
-              --primary-color: #30D5C8; /* Teal */
-              --secondary-color: #20143b; /* Dark Blue */
-              --dark-text: #333333;
-              --medium-text: #555555;
-              --light-text: #777777;
-              --border-light: #e0e0e0;
-              --soft-light-grey: #f8f9fa;
-              --clean-white: #ffffff;
-              --error-red: #dc3545;
-              --success-green: #28a745;
+            --admin-primary: #4c1d95;     /* Deep purple */
+            --admin-primary-light: #7c3aed;
+            --admin-bg-start: #eef2ff;
+            --admin-bg-end: #ffe4e6;
+            --admin-text-dark: #111827;
+            --admin-text-muted: #6b7280;
+            --admin-error: #dc2626;
+            --admin-border: #e5e7eb;
+            --clean-white: #ffffff;
           }
 
-          body {
-              font-family: 'Inter', sans-serif;
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
+          .admin-login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: radial-gradient(circle at top left, var(--admin-bg-start), var(--admin-bg-end));
+            box-sizing: border-box;
           }
 
-          .admin-login-container {
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-              background-color: var(--secondary-color);
-              padding: 20px;
-              box-sizing: border-box;
+          .admin-login-card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--clean-white);
+            border-radius: 18px;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18);
+            padding: 32px 32px 28px;
+            box-sizing: border-box;
           }
 
-          .login-card {
-              background-color: var(--clean-white);
-              padding: 40px;
-              border-radius: 12px;
-              box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-              text-align: center;
-              width: 100%;
-              max-width: 400px;
-              box-sizing: border-box;
-              border: 1px solid var(--border-light);
+          .admin-login-title {
+            font-size: 1.9rem;
+            font-weight: 700;
+            text-align: center;
+            color: var(--admin-primary);
+            margin-bottom: 4px;
           }
 
-          .login-card h2 {
-              margin-bottom: 25px;
-              color: var(--secondary-color); 
-              font-size: 1.8em;
-              font-weight: 700;
+          .admin-login-subtitle {
+            text-align: center;
+            color: var(--admin-text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 20px;
           }
 
-          .input-group {
-              margin-bottom: 15px;
-              position: relative;
+          .admin-error-banner {
+            background-color: #fee2e2;
+            color: var(--admin-error);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.85rem;
+            margin-bottom: 14px;
+            text-align: center;
           }
 
-          .login-card input[type="email"],
-          .login-card input[type="password"],
-          .login-card input[type="text"] {
-              width: 100%;
-              padding: 12px;
-              border: 1px solid var(--border-light);
-              border-radius: 8px;
-              font-size: 1em;
-              box-sizing: border-box;
-              background-color: var(--soft-light-grey);
-              color: var(--dark-text);
-              transition: border-color 0.3s ease, box-shadow 0.3s ease;
+          .admin-input-group {
+            margin-bottom: 14px;
           }
 
-          .login-card input[type="email"]:focus,
-          .login-card input[type="password"]:focus,
-          .login-card input[type="text"]:focus {
-              border-color: var(--primary-color);
-              outline: none;
-              box-shadow: 0 0 0 3px rgba(48, 213, 200, 0.25);
+          .admin-label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--admin-text-dark);
+            margin-bottom: 4px;
+            text-align: left;
           }
 
-          .password-input-group {
-              position: relative;
-              display: flex;
-              align-items: center;
+          .admin-input-wrapper {
+            position: relative;
           }
 
-          .password-input-group input {
-              flex-grow: 1;
-              padding-right: 60px;
+          .admin-input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--admin-border);
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            background-color: #f9fafb;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
           }
 
-          .show-password-toggle {
-              position: absolute;
-              right: 12px;
-              cursor: pointer;
-              font-size: 0.9em;
-              color: var(--secondary-color); 
-              font-weight: 500;
-              user-select: none;
-              padding: 2px 5px;
-              border-radius: 3px;
+          .admin-input:focus {
+            outline: none;
+            border-color: var(--admin-primary-light);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.32);
           }
 
-          .show-password-toggle:hover {
-              color: var(--primary-color);
-              text-decoration: underline;
+          .admin-show-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            color: var(--admin-primary-light);
+            cursor: pointer;
+            user-select: none;
           }
 
-          .login-button {
-              width: 100%;
-              padding: 14px;
-              border: none;
-              border-radius: 8px;
-              font-size: 1.1em;
-              cursor: pointer;
-              transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
-              margin-top: 20px;
-              background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-              color: var(--clean-white);
-              font-weight: 600;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+          .admin-login-button {
+            margin-top: 10px;
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 9999px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #f9fafb;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--admin-primary-light), var(--admin-primary));
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.35);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
           }
 
-          .login-button:hover:not(:disabled) {
-              background: linear-gradient(135deg, #27c2b6 0%, #170e28 100%);
-              transform: translateY(-2px);
-              box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+          .admin-login-button:disabled {
+            opacity: 0.7;
+            cursor: default;
+            box-shadow: none;
           }
 
-          .login-button:disabled {
-              background: var(--border-light);
-              color: var(--light-text);
-              cursor: not-allowed;
-              transform: none;
-              box-shadow: none;
+          .admin-login-button:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(79, 70, 229, 0.45);
           }
 
-          .error-message {
-              color: var(--error-red);
-              margin-top: 5px;
-              margin-bottom: 10px;
-              font-size: 0.85em;
-              text-align: center;
-              padding-left: 5px;
-          }
-          
-          .info-message {
-              color: var(--success-green);
-              margin-top: 15px;
-              font-size: 0.9em;
-              text-align: center;
+          .admin-back-link {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--admin-primary);
+            cursor: pointer;
           }
 
-          .forgot-password,
-          .toggle-link {
-              margin-top: 20px;
-              font-size: 0.9em;
-              color: var(--secondary-color);
-              cursor: pointer;
-              transition: color 0.2s ease, text-decoration 0.2s ease;
-          }
-
-          .forgot-password:hover,
-          .toggle-link:hover {
-              text-decoration: underline;
-              color: var(--primary-color);
-          }
-
-          .back-to-main-login {
-              margin-top: 15px;
-              font-size: 0.9em;
-              color: var(--medium-text);
-              cursor: pointer;
-              transition: color 0.2s ease;
-          }
-
-          .back-to-main-login:hover {
-              color: var(--dark-text);
-              text-decoration: underline;
+          .admin-back-link:hover {
+            text-decoration: underline;
           }
         `}
       </style>
-      <div className="login-card">
-        <h2>Admin Login</h2>
+
+      <div className="admin-login-card">
+        <div className="admin-login-title">Admin Login</div>
+        <div className="admin-login-subtitle">
+          Sign in with your Sportify admin credentials.
+        </div>
+
+        {error && <div className="admin-error-banner">{error}</div>}
+
         <form onSubmit={handleLogin}>
-          <div className="input-group">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(''); }}
-              required
-            />
+          <div className="admin-input-group">
+            <label className="admin-label" htmlFor="admin-email">
+              Email
+            </label>
+            <div className="admin-input-wrapper">
+              <input
+                id="admin-email"
+                type="email"
+                className="admin-input"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
+                autoComplete="username"
+                required
+              />
+            </div>
           </div>
-          <div className="input-group password-input-group">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(''); }}
-              required
-            />
-            <span
-              className="show-password-toggle"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? 'Hide' : 'Show'}
-            </span>
+
+          <div className="admin-input-group">
+            <label className="admin-label" htmlFor="admin-password">
+              Password
+            </label>
+            <div className="admin-input-wrapper">
+              <input
+                id="admin-password"
+                type={showPassword ? 'text' : 'password'}
+                className="admin-input"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
+                autoComplete="current-password"
+                required
+              />
+              <span
+                className="admin-show-toggle"
+                onClick={() => setShowPassword((prev) => !prev)}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </span>
+            </div>
           </div>
-          {error && <p className="error-message">{error}</p>}
-          <button type="submit" disabled={loading} className="login-button">
-            {loading ? 'Logging In...' : 'Login'}
-          </button>
-          
-          <p
-            className="back-to-main-login"
-            onClick={() => navigate('/')} 
+
+          <button
+            type="submit"
+            className="admin-login-button"
+            disabled={loading}
           >
-            ← Back to Main Login Page
-          </p>
+            {loading ? 'Logging in…' : 'Login'}
+          </button>
         </form>
+
+        <div
+          className="admin-back-link"
+          onClick={() => navigate('/')}
+        >
+          ← Back to Main Login Page
+        </div>
       </div>
     </div>
   );

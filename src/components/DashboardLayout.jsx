@@ -1,63 +1,93 @@
-// C:\sportify\src\components\DashboardLayout.jsx (Updated)
+// C:\sportify\src\components\DashboardLayout.jsx
 
 import React from 'react';
-import { useAuth } from '../context/AuthContext'; // 1. Import useAuth
-import { LogOut, User } from 'lucide-react'; // 2. Import icons
-import styles from './DashboardLayout.module.css'; 
+import styles from './DashboardLayout.module.css';
+import { useAuth } from '../context/AuthContext';
 
-// 3. Props are changed: Added 'onLogout'
-const DashboardLayout = ({ title, navItems, activeFeature, setActiveFeature, onLogout, children }) => {
-    
-    // 4. Get user data from context
-    const { user, userProfile } = useAuth();
-    
-    // Use the profile name if it exists, otherwise fall back to the auth email
-    const displayName = userProfile?.name || user?.email || 'User';
+function DashboardLayout({
+  title,
+  navItems,
+  activeFeature,
+  setActiveFeature,
+  onLogout,
+  children,
+}) {
+  const { user, userProfile, logout } = useAuth();
 
-    return (
-        <div className={styles.layoutRoot}>
-            {/* --- SIDEBAR --- */}
-            <div className={styles.sidebar}>
-                {/* Header updated to be more generic, or you can customize it */}
-                <div className={styles.sidebarHeader}>Sportify</div> 
-                <ul className={styles.navList}>
-                    {navItems.map((item) => (
-                        <li
-                            key={item.key}
-                            className={`${styles.navItem} ${activeFeature === item.key ? styles.activeNavItem : ''}`}
-                            onClick={() => setActiveFeature(item.key)}
-                        >
-                            {item.icon} {item.label}
-                        </li>
-                    ))}
-                </ul>
+  const handleNavClick = (key) => {
+    if (setActiveFeature) setActiveFeature(key);
+  };
+
+  const handleLogoutClick = async () => {
+    try {
+      if (onLogout) {
+        // page-specific handler (e.g. navigate('/'))
+        await onLogout();
+      } else if (logout) {
+        // fallback: use global logout from context
+        await logout();
+      }
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
+
+  const displayName =
+    userProfile?.name || user?.email || user?.uid || 'User';
+
+  return (
+    <div className={styles.layoutRoot}>
+      {/* SIDEBAR */}
+      <aside className={styles.sidebar}>
+        <div className={styles.sidebarHeader}>Sportify</div>
+
+        <ul className={styles.navList}>
+          {navItems?.map((item) => (
+            <li
+              key={item.key}
+              className={
+                item.key === activeFeature
+                  ? `${styles.navItem} ${styles.activeNavItem}`
+                  : styles.navItem
+              }
+              onClick={() => handleNavClick(item.key)}
+            >
+              {/* Optional icon support */}
+              {item.icon && <span>{item.icon}</span>}
+              <span>{item.label}</span>
+            </li>
+          ))}
+        </ul>
+      </aside>
+
+      {/* MAIN AREA */}
+      <div className={styles.mainContentWrapper}>
+        {/* TOPBAR */}
+        <header className={styles.topbar}>
+          <h1 className={styles.pageTitle}>{title}</h1>
+
+          <div className={styles.userActions}>
+            <div className={styles.profileButton}>
+              <span>👤</span>
+              <span>{displayName}</span>
             </div>
 
-            {/* --- MAIN CONTENT WRAPPER --- */}
-            <div className={styles.mainContentWrapper}>
-                
-                {/* --- 5. NEW TOPBAR (Contains Profile & Logout) --- */}
-                <div className={styles.topbar}>
-                    <h1 className={styles.pageTitle}>{title}</h1>
-                    <div className={styles.userActions}>
-                        <div className={styles.profileButton}>
-                            <User size={16} />
-                            <span>{displayName}</span>
-                        </div>
-                        <button className={styles.logoutButton} onClick={onLogout}>
-                            <LogOut size={16} />
-                            <span>Logout</span>
-                        </button>
-                    </div>
-                </div>
-                
-                {/* --- CONTENT AREA --- */}
-                <div className={styles.contentArea}>
-                    {children}
-                </div>
-            </div>
-        </div>
-    );
-};
+            <button
+              type="button"
+              className={styles.logoutButton}
+              onClick={handleLogoutClick}
+            >
+              <span>⏻</span>
+              <span>Logout</span>
+            </button>
+          </div>
+        </header>
+
+        {/* SCROLLABLE CONTENT */}
+        <main className={styles.contentArea}>{children}</main>
+      </div>
+    </div>
+  );
+}
 
 export default DashboardLayout;

@@ -1,187 +1,349 @@
-import React, { useState, useEffect } from 'react';
+// C:\sportify\src\components\ApproveRegistrations.jsx
+
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-// 1. Import 'doc' and 'updateDoc' from the central firebase file
-import { collection, query, where, onSnapshot, updateDoc, doc } from '../firebase'; 
-
-// Simple styling (kept local)
-const buttonStyle = { padding: '8px 12px', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' };
-const tableHeaderStyle = { padding: '12px', border: 'none' };
-const tableCellStyle = { padding: '12px', border: 'none' };
-const tableStyle = { width: '100%', borderCollapse: 'collapse', textAlign: 'left', marginBottom: '30px' };
-
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  updateDoc,
+  addDoc,
+  db as dbDirect, // in case you ever use it directly
+} from '../firebase';
 
 function ApproveRegistrations() {
-    // Destructure properties from the Auth Context
-    const { db, appId, userRole, isLoading } = useAuth();
-    
-    const [pendingApplications, setPendingApplications] = useState([]);
-    const [isDataLoading, setIsDataLoading] = useState(true);
-    const [statusMessage, setStatusMessage] = useState('');
+  const { db, appId, userRole, userId, isLoading } = useAuth();
 
-    // --- PATHS ---
-    const collectionPath = `artifacts/${appId}/admin/data/pending_applications`;
-    const usersCollectionPath = `artifacts/${appId}/public/data/users`; // Path to main user profiles
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionMessage, setActionMessage] = useState('');
 
-    useEffect(() => {
-        // Initial Check
-        if (isLoading || !db || !appId) {
-            setIsDataLoading(true);
-            return;
-        }
-        
-        // Role Check
-        if (userRole !== 'admin') {
-            setIsDataLoading(false);
-            return; 
-        }
+  // ---- Load pending applications (status Pending or Pending Review) ----
+  useEffect(() => {
+    if (isLoading || !db || !appId) return;
 
-        const masterApplicationsCollectionRef = collection(db, collectionPath);
-        const q = query(masterApplicationsCollectionRef, where("status", "==", "Pending Review"));
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const applications = [];
-            snapshot.forEach((doc) => {
-                // Ensure the application has a userId before adding
-                if (doc.data().userId) { 
-                    applications.push({ id: doc.id, ...doc.data() });
-                } else {
-                    console.warn("Found pending application without a userId:", doc.id);
-                }
-            });
-            setPendingApplications(applications);
-            setIsDataLoading(false);
-        }, (error) => {
-            console.error("Error fetching pending applications:", error);
-            setIsDataLoading(false);
-            setStatusMessage("Failed to load applications. Check Firestore rules/index.");
-        });
-
-        // Cleanup listener on component unmount
-        return () => unsubscribe();
-        
-    }, [db, appId, userRole, isLoading, collectionPath]); 
-
-    // --- UPDATED handleAction ---
-    const handleAction = async (applicationId, status) => {
-        if (!db || !appId) {
-            setStatusMessage("Error: Database connection not ready.");
-            return;
-        }
-
-        // Find the specific application data in the current state
-        const application = pendingApplications.find(app => app.id === applicationId);
-        if (!application || !application.userId) {
-             setStatusMessage("Error: Could not find application data or user ID.");
-             console.error("Missing application data for ID:", applicationId, application);
-             return;
-        }
-        
-        const applicationDocRef = doc(db, collectionPath, applicationId);
-        const userDocRef = doc(db, usersCollectionPath, application.userId); // Reference to the main user profile
-
-        try {
-            // 1. Update the application document status
-            await updateDoc(applicationDocRef, { 
-                status: status, 
-                reviewDate: new Date() 
-            });
-            setStatusMessage(`Application ${applicationId} status set to ${status}.`);
-
-            // 2. --- NEW: If approved, update the main user profile ---
-            if (status === 'Approved') {
-                try {
-                    await updateDoc(userDocRef, {
-                        role: 'player', // Grant the player role
-                        status: 'Approved', // Optional: add an approval status field
-                        approvedDate: new Date()
-                    });
-                    setStatusMessage(`Application ${applicationId} Approved. Player role granted to user ${application.userId}.`);
-                } catch (profileError) {
-                    console.error(`Error updating user profile ${application.userId}:`, profileError);
-                    // Rollback application status? Or just show error? For now, show error.
-                    setStatusMessage(`Application ${applicationId} status updated, but FAILED to grant player role: ${profileError.message}`);
-                }
-            }
-            
-            // Optional: Consider deleting the application document after processing
-            // await deleteDoc(applicationDocRef);
-
-        } catch (error) {
-            console.error(`Error updating status to ${status}:`, error);
-            setStatusMessage(`Failed to set status to ${status}. Ensure your Admin role has UPDATE permission.`);
-        }
-    };
-
-    // --- RENDER CHECKS ---
-    if (isLoading || isDataLoading) {
-        return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Admin Panel...</div>;
-    }
-    
     if (userRole !== 'admin') {
-        return <div style={{ padding: '40px', textAlign: 'center', color: '#dc3545' }}>Permission Denied. Must be an Admin. (Current Role: {userRole})</div>;
+      setLoading(false);
+      return;
     }
-    
-    // --- Render Content ---
-    return (
-        <div style={{ padding: '20px', maxWidth: '900px', margin: '20px auto', backgroundColor: 'white', borderRadius: '8px' }}>
-            <h2>✔️ Approve Player Registrations</h2>
-            
-            {statusMessage && (
-                <p style={{ 
-                    padding: '10px', 
-                    borderRadius: '5px', 
-                    fontWeight: 'bold',
-                    color: statusMessage.includes('Failed') || statusMessage.includes('Error') ? '#721c24' : '#155724',
-                    backgroundColor: statusMessage.includes('Failed') || statusMessage.includes('Error') ? '#f8d7da' : '#d4edda',
-                    border: `1px solid ${statusMessage.includes('Failed') || statusMessage.includes('Error') ? '#f5c6cb' : '#c3e6cb'}`
-                 }}>
-                    {statusMessage}
-                </p>
-            )}
 
-            <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '5px' }}>
-                Pending Applications ({pendingApplications.length})
-            </h3>
-            
-            {pendingApplications.length === 0 ? (
-                <p style={{ fontStyle: 'italic', color: 'green' }}>No new applications pending approval.</p>
-            ) : (
-                <table style={tableStyle}>
-                    <thead>
-                        <tr style={{ backgroundColor: '#fffbe6' }}>
-                            <th style={tableHeaderStyle}>Applicant Email</th> 
-                            <th style={tableHeaderStyle}>Sport</th>
-                            <th style={tableHeaderStyle}>DOB</th>
-                            <th style={tableHeaderStyle}>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {pendingApplications.map((player) => (
-                            <tr key={player.id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={tableCellStyle}>{player.email || 'No Email Provided'}</td> 
-                                <td style={tableCellStyle}>{player.sport}</td>
-                                <td style={tableCellStyle}>{player.dob}</td>
-                                <td style={tableCellStyle}>
-                                    <button 
-                                        onClick={() => handleAction(player.id, 'Approved')} 
-                                        style={{ ...buttonStyle, backgroundColor: '#28a745', marginRight: '10px' }}
-                                    >
-                                        Approve
-                                    </button>
-                                    <button 
-                                        onClick={() => handleAction(player.id, 'Rejected')} 
-                                        style={{ ...buttonStyle, backgroundColor: '#dc3545' }}
-                                    >
-                                        Reject
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
-        </div>
+    const pendingRef = collection(
+      db,
+      `artifacts/${appId}/admin/data/pending_applications`
     );
+
+    // treat both "Pending" and "Pending Review" as pending
+    const q = query(pendingRef, where('status', 'in', ['Pending', 'Pending Review']));
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        setApplications(list);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Error fetching pending applications:', err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [db, appId, userRole, isLoading]);
+
+  // ---- Helpers to update status ----
+  const updateStatus = async (app, newStatus) => {
+    if (!db || !appId) return;
+    setActionMessage('');
+
+    try {
+      const ref = doc(
+        db,
+        `artifacts/${appId}/admin/data/pending_applications`,
+        app.id
+      );
+
+      await updateDoc(ref, {
+        status: newStatus,
+        reviewedAt: new Date(),
+        reviewedBy: userId || 'admin',
+      });
+
+      // Optional: add a notification for the player when status changes
+      try {
+        const notifRef = collection(
+          db,
+          `artifacts/${appId}/public/data/notifications`
+        );
+
+        let message = '';
+        let type = 'info';
+
+        if (newStatus === 'Approved') {
+          message = `Your trial application for ${app.trialName || app.sport || 'the event'} has been approved.`;
+          type = 'success';
+        } else if (newStatus === 'Rejected') {
+          message = `Your trial application for ${app.trialName || app.sport || 'the event'} has been rejected.`;
+          type = 'error';
+        } else if (newStatus === 'Pending') {
+          message = `Your trial application for ${app.trialName || app.sport || 'the event'} is still under review.`;
+          type = 'info';
+        }
+
+        await addDoc(notifRef, {
+          message,
+          type,
+          targetRole: 'player',
+          targetUserId: app.userId || null,
+          createdAt: new Date(),
+          related: 'Trial Application',
+        });
+      } catch (notifErr) {
+        console.warn('Notification write failed (non-critical):', notifErr);
+      }
+
+      const text =
+        newStatus === 'Approved'
+          ? 'Application approved.'
+          : newStatus === 'Rejected'
+          ? 'Application rejected.'
+          : 'Left as pending.';
+
+      setActionMessage(text);
+    } catch (err) {
+      console.error('Error updating application status:', err);
+      setActionMessage('Failed to update application status.');
+    }
+  };
+
+  const handleApprove = (app) => updateStatus(app, 'Approved');
+  const handleReject = (app) => updateStatus(app, 'Rejected');
+  const handleKeepPending = (app) => updateStatus(app, 'Pending');
+
+  // ---- Render states ----
+  if (isLoading || loading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        Loading pending applications…
+      </div>
+    );
+  }
+
+  if (userRole !== 'admin') {
+    return (
+      <div
+        style={{
+          padding: '40px',
+          textAlign: 'center',
+          color: '#BC0E4C',
+        }}
+      >
+        Access Denied: Only administrators can approve registrations.
+      </div>
+    );
+  }
+
+  const pendingCount = applications.length;
+
+  return (
+    <div style={{ padding: '20px', maxWidth: '1000px', margin: '0 auto' }}>
+      <h2
+        style={{
+          color: 'var(--sportify-royal, var(--sportify-navy))',
+          marginTop: 0,
+          marginBottom: '16px',
+        }}
+      >
+        ✅ Approve Player Registrations
+      </h2>
+
+      <div
+        style={{
+          marginBottom: '12px',
+          fontSize: '0.95rem',
+          color: '#4b5563',
+        }}
+      >
+        Pending Applications ({pendingCount})
+      </div>
+
+      {actionMessage && (
+        <div
+          style={{
+            marginBottom: '16px',
+            padding: '10px 12px',
+            borderRadius: '8px',
+            backgroundColor: '#ecfdf3',
+            color: '#166534',
+            fontSize: '0.9rem',
+          }}
+        >
+          {actionMessage}
+        </div>
+      )}
+
+      {pendingCount === 0 ? (
+        <div
+          style={{
+            padding: '24px',
+            borderRadius: '12px',
+            backgroundColor: '#ffffff',
+            boxShadow: '0 8px 20px rgba(15,23,42,0.06)',
+            fontSize: '0.95rem',
+            color: '#16a34a',
+          }}
+        >
+          No new applications pending approval.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+          }}
+        >
+          {applications.map((app) => (
+            <div
+              key={app.id}
+              style={{
+                padding: '16px 18px',
+                borderRadius: '12px',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 8px 18px rgba(15,23,42,0.06)',
+                borderLeft: '4px solid var(--sportify-yellow, #FFC501)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      color: '#111827',
+                    }}
+                  >
+                    {app.fullName || app.name || 'Unnamed Player'}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.85rem',
+                      color: '#6b7280',
+                      marginTop: '2px',
+                    }}
+                  >
+                    {app.email} {app.sport ? `• ${app.sport}` : ''}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    color: '#6b7280',
+                    textAlign: 'right',
+                  }}
+                >
+                  Status:{' '}
+                  <span style={{ fontWeight: 600, color: '#92400e' }}>
+                    {app.status}
+                  </span>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  marginTop: '8px',
+                  fontSize: '0.85rem',
+                  color: '#4b5563',
+                }}
+              >
+                {app.phoneNumber && (
+                  <span>Phone: {app.phoneNumber}</span>
+                )}
+                {app.dob && <span>DOB: {app.dob}</span>}
+                {app.experience && (
+                  <span>Experience: {app.experience} years</span>
+                )}
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '10px',
+                  marginTop: '12px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleApprove(app)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '999px',
+                    border: 'none',
+                    backgroundColor: '#16a34a',
+                    color: '#ffffff',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReject(app)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '999px',
+                    border: 'none',
+                    backgroundColor: '#dc2626',
+                    color: '#ffffff',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleKeepPending(app)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '999px',
+                    border: '1px solid #d1d5db',
+                    backgroundColor: '#ffffff',
+                    color: '#4b5563',
+                    fontSize: '0.9rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Keep Pending
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default ApproveRegistrations;

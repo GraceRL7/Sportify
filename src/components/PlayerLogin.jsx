@@ -231,25 +231,17 @@ const PlayerLogin = () => {
 
           /* HomiFi Color Palette */
           :root {
-              --homifi-teal: #30D5C8;
-              --homifi-dark-blue: #20143b;
-              --homifi-darker-blue: #000069;
-              --homifi-deepest-blue: #000040;
+    --sportify-navy:   #354F60;
+    --sportify-red:    #BC0E4C;
+    --sportify-yellow: #FFC501;
 
-              --dark-text: #333333;
-              --medium-text: #555555;
-              --light-text: #777777;
-              --border-light: #e0e0e0;
-              --border-subtle: #eeeeee;
+    --dark-text: #222222;
+    --border-light: #e0e0e0;
+    --clean-white: #ffffff;
+}
 
-              --clean-white: #ffffff;
-              --soft-light-grey: #f8f9fa;
-              --very-light-blue-teal: #e0f7fa;
+/* Example main background + primary buttons */
 
-              --success-green: #28a745;
-              --error-red: #dc3545;
-              --warning-orange: #ffc107;
-          }
 
           body {
               font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -475,6 +467,18 @@ const PlayerLogin = () => {
                   font-size: 0.75em;
               }
           }
+              .login-container {
+    background-color: var(--sportify-navy);
+}
+
+.primary-button {
+    background-color: var(--sportify-yellow);
+    color: #333;
+}
+
+.primary-button:hover {
+    background-color: #e0b700;
+}
         `}
       </style>
       <div className="login-box">

@@ -52,24 +52,22 @@
 }
 
 /* --- Color Themes --- */
-
 .success {
-    background-color: #28a745; /* Green */
+    background-color: #28a745; /* ok to keep green */
 }
 
 .error {
-    background-color: #dc3545; /* Red */
+    background-color: var(--sportify-red);
 }
 
 .warning {
-    background-color: #ffc107; /* Yellow/Orange */
-    color: #333; /* Darker text for yellow */
+    background-color: var(--sportify-yellow);
+    color: #333;
 }
-/* Adjust close button for warning */
 .warning .closeButton {
     color: #333;
 }
 
 .info {
-    background-color: #17a2b8; /* Teal/Blue */
+    background-color: var(--sportify-navy);
 }

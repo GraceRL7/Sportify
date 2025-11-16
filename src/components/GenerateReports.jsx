@@ -87,14 +87,14 @@ const GenerateReports = () => {
             snapshot.forEach(doc => {
                 const data = doc.data();
                 // --- ADDED Player Name to export ---
-                players.push({
-                    playerId: data.userId || doc.id, 
-                    playerName: data.fullName || 'N/A', // Use fullName from application
-                    email: data.email || 'N/A', 
-                    sport: data.sport,
-                    dob: data.dob,
-                    experience: data.experience || 'N/A',
-                });
+               players.push({
+    playerName: data.fullName || 'N/A',
+    email: data.email || 'N/A',
+    sport: data.sport,
+    dob: data.dob,
+    experience: data.experience || 'N/A',
+});
+
             });
 
             if (players.length === 0) {

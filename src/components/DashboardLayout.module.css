@@ -1,129 +1,170 @@
-/* C:\sportify\src\components\DashboardLayout.module.css (Updated) */
+/* C:\sportify\src\components\DashboardLayout.module.css */
 
+/* --- Sportify Color System (based on your palette) --- */
+:root {
+  /* Brand Theme — Royal Blue Edition */
+  --sportify-navy: #002c47;   /* Royal Blue */
+  --sportify-red: #BC0E4C;    /* Premium Sport Red */
+  --sportify-yellow: #FFC501; /* Golden Accent */
+  --sportify-bg: #F5F7FB;     /* Light Soft Background */
+  --sportify-text-main: #1F2937;
+  --sportify-text-muted: #6B7280;
+}
+
+
+/* Whole dashboard wrapper */
 .layoutRoot {
     display: flex;
     min-height: 100vh;
-    background-color: #f8f9fa; /* Light background for the whole page */
+    background-color: var(--sportify-bg);
+    font-size: 16px;              /* Bigger base font */
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* ============== SIDEBAR ============== */
 .sidebar {
-    width: 250px;
-    background-color: #343a40; /* Dark background */
-    color: white;
+    width: 260px;                 /* Wider sidebar so items feel bigger */
+    background: var(--sportify-navy);
+    color: #ffffff;
     display: flex;
-    flex-direction: column; /* Allow sidebar to space out header/nav */
-    flex-shrink: 0; /* Prevent sidebar from shrinking */
+    flex-direction: column;
+    flex-shrink: 0;
+    box-shadow: 4px 0 18px rgba(0, 0, 0, 0.1);
 }
 
 .sidebarHeader {
-    text-align: center;
-    padding: 20px 10px;
-    font-size: 1.5em;
-    font-weight: 700;
-    color: #ffc107; /* Accent color */
-    border-bottom: 1px solid #495057; /* Separator */
+    text-align: left;
+    padding: 24px 22px;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    color: var(--sportify-yellow);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .navList {
     list-style: none;
-    padding: 0;
+    padding: 12px 0 0;
     margin: 0;
-    flex-grow: 1; /* Make nav list fill available space */
-    padding-top: 15px;
+    flex: 1;
 }
 
+/* Default nav item */
 .navItem {
-    padding: 15px 20px;
+    padding: 14px 22px;
     cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
     display: flex;
     align-items: center;
-    gap: 10px; /* Space between icon and label */
-    font-size: 1.05em;
+    gap: 10px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    transition: background 0.2s ease, color 0.2s ease, padding-left 0.2s ease;
 }
 
 .navItem:hover {
-    background-color: #495057;
+    background: rgba(255, 255, 255, 0.06);
+    padding-left: 26px;
 }
 
+/* Active nav item = bold red/yellow gradient bar */
 .activeNavItem {
-    background-color: #007bff;
-    color: white;
-    font-weight: bold;
-    border-left: 5px solid #ffc107;
-    padding-left: 15px;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 197, 1, 0.22),
+        rgba(188, 14, 76, 0.85)
+    );
+    color: #ffffff;
+    font-weight: 700;
+    border-left: 5px solid var(--sportify-yellow);
+    padding-left: 21px;
 }
 
-/* --- NEW Main Content Wrapper --- */
-/* This wrapper holds the topbar and the scrollable content area */
+/* ============== MAIN CONTENT WRAPPER ============== */
 .mainContentWrapper {
-    flex-grow: 1; /* Takes up all remaining space */
+    flex: 1;
     display: flex;
     flex-direction: column;
-    height: 100vh; /* Fix height to viewport */
-    overflow: hidden; /* Prevent double scrollbars */
+    height: 100vh;
+    overflow: hidden;
 }
 
-/* --- NEW Topbar Styles --- */
+/* Top bar with page title + user info */
 .topbar {
-    height: 60px;
+    height: 72px;                           /* Taller topbar */
     background-color: #ffffff;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e5e7eb;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 30px;
-    flex-shrink: 0; /* Prevent topbar from shrinking */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 0 32px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
 }
 
+/* Big page title */
+.pageTitle {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--sportify-navy);
+    letter-spacing: 0.01em;
+    margin: 0;
+}
+
+/* Right side of the top bar */
 .userActions {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 14px;
 }
 
+/* User pill */
 .profileButton {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: #333;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background-color: #f3f4f6;
+    color: var(--sportify-text-main);
+    font-size: 0.95rem;
     font-weight: 600;
-    padding: 8px 12px;
-    border-radius: 6px;
-    background-color: #f1f3f5;
 }
 
+/* Logout button */
 .logoutButton {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 12px;
-    border-radius: 6px;
+    padding: 8px 16px;
+    border-radius: 999px;
     border: none;
-    background-color: #dc3545;
-    color: white;
+    background: linear-gradient(135deg, var(--sportify-red), #8b0b37);
+    color: #ffffff;
+    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s;
+    box-shadow: 0 4px 10px rgba(188, 14, 76, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
 .logoutButton:hover {
-    background-color: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(188, 14, 76, 0.5);
+    opacity: 0.95;
 }
 
-/* --- MODIFIED Page Title --- */
-/* It is now inside the topbar */
-.pageTitle {
-    margin: 0;
-    font-size: 1.6em;
-    color: #343a40;
-}
-
-/* --- MODIFIED Content Area --- */
+/* ============== SCROLLABLE MAIN CONTENT ============== */
 .contentArea {
-    flex-grow: 1; /* Fills remaining space */
-    padding: 30px;
-    overflow-y: auto; /* Makes only this area scrollable */
-    background-color: #f8f9fa; /* Light bg for content */
+    flex: 1;
+    padding: 24px 40px 32px;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+/* Cards / sections inside dashboards will look better on this bg */
+.contentArea > * {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
 }
