@@ -1,9 +1,8 @@
-// C:\sportify\src\components\ManageTrials.jsx (Updated with Notifications)
+// C:\sportify\src\components\ManageTrials.jsx
 
 import React, { useState, useEffect } from 'react';
-// 1. Import useAuth to get the authenticated user and db
 import { useAuth } from '../context/AuthContext';
-// 2. Import ALL firestore functions from your central firebase.js file
+import { useNotification } from '../context/NotificationContext';
 import {
   collection,
   addDoc,
@@ -11,29 +10,26 @@ import {
   onSnapshot,
   where,
 } from '../firebase';
-// 3. Import Notification context
-import { useNotification } from '../context/NotificationContext';
 
 function ManageTrials() {
-  // 4. Get authenticated context (db and userRole will now be correct)
   const { db, appId, userRole, isLoading } = useAuth();
   const { addNotification } = useNotification();
 
   const [trials, setTrials] = useState([]);
+  const [coaches, setCoaches] = useState([]);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+
   const [formData, setFormData] = useState({
     date: '',
     sport: '',
     location: '',
     coachId: '',
   });
-  const [message, setMessage] = useState(null);
 
-  const [coaches, setCoaches] = useState([]);
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [message, setMessage] = useState(null);
 
   // --- EFFECT TO FETCH TRIALS AND COACHES ---
   useEffect(() => {
-    // 5. This check will now pass because useAuth provides all values
     if (isLoading || !db || !appId || userRole !== 'admin') {
       if (userRole !== 'admin' && !isLoading) {
         setIsDataLoading(false);
@@ -42,9 +38,9 @@ function ManageTrials() {
     }
 
     const TRIALS_COLLECTION_PATH = `artifacts/${appId}/public/data/trials`;
-    const COACHES_COLLECTION_PATH = `artifacts/${appId}/public/data/users`;
+    const USERS_COLLECTION_PATH = `artifacts/${appId}/public/data/users`;
 
-    // 6. Fetch Trials
+    // Fetch Trials
     const trialsUnsub = onSnapshot(
       collection(db, TRIALS_COLLECTION_PATH),
       (snapshot) => {
@@ -63,11 +59,12 @@ function ManageTrials() {
       }
     );
 
-    // 7. Fetch REAL Coaches
+    // Fetch coaches (users with role = coach)
     const coachesQuery = query(
-      collection(db, COACHES_COLLECTION_PATH),
+      collection(db, USERS_COLLECTION_PATH),
       where('role', '==', 'coach')
     );
+
     const coachesUnsub = onSnapshot(
       coachesQuery,
       (snapshot) => {
@@ -93,19 +90,20 @@ function ManageTrials() {
     };
   }, [db, appId, userRole, isLoading, addNotification]);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  // --- handlers ---
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // ADD TRIAL + WRITE NOTIFICATIONS
   const handleAddTrial = async (e) => {
     e.preventDefault();
     setMessage(null);
 
-    const selectedCoach = coaches.find((c) => c.id === formData.coachId);
+    if (!db || !appId) return;
 
+    const selectedCoach = coaches.find((c) => c.id === formData.coachId);
     if (!selectedCoach) {
       const msg = 'Please select a valid coach.';
       setMessage({ type: 'error', text: msg });
@@ -118,7 +116,7 @@ function ManageTrials() {
       sport: formData.sport,
       location: formData.location,
       coachId: selectedCoach.id,
-      coachName: selectedCoach.name || selectedCoach.email, // Use name or email
+      coachName: selectedCoach.name || selectedCoach.email,
       createdAt: new Date(),
     };
 
@@ -129,13 +127,46 @@ function ManageTrials() {
       );
       await addDoc(trialsCollectionRef, newTrialData);
 
-      setFormData({ date: '', sport: '', location: '', coachId: '' });
+      // reset form
+      setFormData({
+        date: '',
+        sport: '',
+        location: '',
+        coachId: '',
+      });
 
-      const msg = `New trial for ${newTrialData.sport} successfully scheduled.`;
+      const msg = `New trial for ${newTrialData.sport} scheduled successfully.`;
       setMessage({ type: 'success', text: msg });
       addNotification('New trial scheduled successfully.', 'success');
+
+      // 🔔 ALSO write notifications in Firestore
+
+      const notifRef = collection(
+        db,
+        `artifacts/${appId}/public/data/notifications`
+      );
+
+      // 1. Broadcast to all players
+      await addDoc(notifRef, {
+        message: `New ${newTrialData.sport} trial scheduled on ${newTrialData.date} at ${newTrialData.location}.`,
+        type: 'info',
+        targetRole: 'player',
+        targetUserId: null, // all players
+        createdAt: new Date(),
+        related: 'New Trial',
+      });
+
+      // 2. Specific notification for the assigned coach
+      await addDoc(notifRef, {
+        message: `You have been assigned to a ${newTrialData.sport} trial on ${newTrialData.date}.`,
+        type: 'info',
+        targetRole: 'coach',
+        targetUserId: selectedCoach.id,
+        createdAt: new Date(),
+        related: 'New Trial Assignment',
+      });
     } catch (error) {
-      console.error('Error adding document: ', error);
+      console.error('Error adding trial: ', error);
       const msg = `Failed to schedule trial: ${error.message}`;
       setMessage({ type: 'error', text: msg });
       addNotification('Failed to schedule trial.', 'error');
@@ -144,11 +175,10 @@ function ManageTrials() {
     setTimeout(() => setMessage(null), 5000);
   };
 
-  // 8. Loading checks
-  if (isLoading) {
+  if (isLoading || isDataLoading) {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
-        Authenticating...
+        Loading trials and coaches…
       </div>
     );
   }
@@ -159,176 +189,68 @@ function ManageTrials() {
         style={{
           padding: '40px',
           textAlign: 'center',
-          color: '#dc3545',
+          color: '#BC0E4C',
         }}
       >
-        Permission Denied. Must be an Admin.
-      </div>
-    );
-  }
-
-  if (isDataLoading) {
-    return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        Loading Trials and Coach Data...
+        Only administrators can manage trials.
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        padding: '20px',
-        maxWidth: '900px',
-        margin: '20px auto',
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
-      }}
-    >
-      <h2>🗓️ Manage Upcoming Trials</h2>
+    <div style={{ padding: '20px', maxWidth: '900px', margin: '20px auto' }}>
+      <h2
+        style={{
+          marginTop: 0,
+          marginBottom: '16px',
+          color: 'var(--sportify-royal, var(--sportify-navy))',
+        }}
+      >
+        📅 Manage Trials
+      </h2>
 
-      {/* Status Message */}
       {message && (
-        <p
+        <div
           style={{
-            padding: '10px',
-            borderRadius: '4px',
-            fontWeight: 'bold',
+            marginBottom: '18px',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            fontSize: '0.9rem',
             backgroundColor:
               message.type === 'error'
-                ? '#f8d7da'
+                ? '#fee2e2'
                 : message.type === 'success'
-                ? '#d4edda'
-                : '#fff3cd',
+                ? '#dcfce7'
+                : '#e5e7eb',
             color:
               message.type === 'error'
-                ? '#721c24'
+                ? '#b91c1c'
                 : message.type === 'success'
-                ? '#155724'
-                : '#856404',
-            marginBottom: '20px',
+                ? '#166534'
+                : '#374151',
           }}
         >
           {message.text}
-        </p>
+        </div>
       )}
 
-      {/* ADD NEW TRIAL FORM */}
-      <div
-        style={{
-          border: '1px solid #28a745',
-          padding: '20px',
-          borderRadius: '8px',
-          marginBottom: '30px',
-          backgroundColor: '#e6ffe6',
-        }}
-      >
-        <h3 style={{ marginTop: '0', color: '#28a745' }}>
-          Add New Trial Event
-        </h3>
-        <form
-          onSubmit={handleAddTrial}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '15px',
-          }}
-        >
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Date:</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              required
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Sport:</label>
-            <select
-              name="sport"
-              value={formData.sport}
-              onChange={handleChange}
-              required
-              style={inputStyle}
-            >
-              <option value="">-- Select Sport --</option>
-              <option value="Football">Football</option>
-              <option value="Basketball">Basketball</option>
-              <option value="Cricket">Cricket</option>
-              <option value="Tennis">Tennis</option>
-            </select>
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Location:</label>
-            <input
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              placeholder="e.g., Main Pitch A"
-              required
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={formGroupStyle}>
-            <label style={labelStyle}>Assign Coach:</label>
-            <select
-              name="coachId"
-              value={formData.coachId}
-              onChange={handleChange}
-              required
-              style={inputStyle}
-            >
-              <option value="">-- Choose Coach --</option>
-              {coaches.map((coach) => (
-                <option key={coach.id} value={coach.id}>
-                  {coach.name || coach.email}
-                  {coach.assignedSport ? ` (${coach.assignedSport})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div
-            style={{
-              gridColumn: 'span 4',
-              textAlign: 'right',
-              paddingTop: '10px',
-            }}
-          >
-            <button type="submit" style={buttonStyle}>
-              Schedule Trial
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* UPCOMING TRIALS LIST */}
-      <h3
-        style={{ borderBottom: '1px solid #eee', paddingBottom: '10px' }}
-      >
-        Upcoming Scheduled Trials ({trials.length})
-      </h3>
-
+      {/* Existing trials table */}
+      <h3>Scheduled Trials</h3>
       {trials.length === 0 ? (
-        <p style={{ fontStyle: 'italic', color: '#666' }}>
-          No trials are currently scheduled.
-        </p>
+        <p style={{ color: '#6b7280' }}>No trials have been scheduled yet.</p>
       ) : (
         <table style={tableStyle}>
           <thead>
-            <tr style={{ backgroundColor: '#f0f0f0' }}>
+            <tr
+              style={{
+                backgroundColor: '#f9fafb',
+                borderBottom: '1px solid #e5e7eb',
+              }}
+            >
               <th style={tableHeaderStyle}>Date</th>
               <th style={tableHeaderStyle}>Sport</th>
               <th style={tableHeaderStyle}>Location</th>
-              <th style={tableHeaderStyle}>Assigned Coach</th>
+              <th style={tableHeaderStyle}>Coach</th>
             </tr>
           </thead>
           <tbody>
@@ -354,11 +276,106 @@ function ManageTrials() {
           </tbody>
         </table>
       )}
+
+      {/* New trial form */}
+      <h3 style={{ marginTop: '30px' }}>Create New Trial</h3>
+      <form
+        onSubmit={handleAddTrial}
+        style={{
+          marginTop: '10px',
+          padding: '16px',
+          borderRadius: '10px',
+          backgroundColor: '#ffffff',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
+        }}
+      >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '16px',
+          }}
+        >
+          <div style={formGroupStyle}>
+            <label htmlFor="date" style={labelStyle}>
+              Date
+            </label>
+            <input
+              type="date"
+              id="date"
+              name="date"
+              value={formData.date}
+              onChange={handleInputChange}
+              required
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={formGroupStyle}>
+            <label htmlFor="sport" style={labelStyle}>
+              Sport
+            </label>
+            <input
+              type="text"
+              id="sport"
+              name="sport"
+              placeholder="e.g. Football"
+              value={formData.sport}
+              onChange={handleInputChange}
+              required
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={formGroupStyle}>
+            <label htmlFor="location" style={labelStyle}>
+              Location
+            </label>
+            <input
+              type="text"
+              id="location"
+              name="location"
+              placeholder="Ground / Turf name"
+              value={formData.location}
+              onChange={handleInputChange}
+              required
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={formGroupStyle}>
+            <label htmlFor="coachId" style={labelStyle}>
+              Assign Coach
+            </label>
+            <select
+              id="coachId"
+              name="coachId"
+              value={formData.coachId}
+              onChange={handleInputChange}
+              required
+              style={inputStyle}
+            >
+              <option value="">Select coach</option>
+              {coaches.map((coach) => (
+                <option key={coach.id} value={coach.id}>
+                  {coach.name || coach.email}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '18px', textAlign: 'right' }}>
+          <button type="submit" style={buttonStyle}>
+            Save Trial
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
 
-// Simple Styling
+// Simple styling
 const formGroupStyle = { display: 'flex', flexDirection: 'column' };
 const labelStyle = {
   marginBottom: '5px',

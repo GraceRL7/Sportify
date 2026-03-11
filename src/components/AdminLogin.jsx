@@ -272,7 +272,7 @@ const AdminLogin = () => {
       <div className="admin-login-card">
         <div className="admin-login-title">Admin Login</div>
         <div className="admin-login-subtitle">
-          Sign in with your Sportify admin credentials.
+          
         </div>
 
         {error && <div className="admin-error-banner">{error}</div>}

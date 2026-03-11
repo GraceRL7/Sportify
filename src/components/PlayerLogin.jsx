@@ -225,12 +225,9 @@ const PlayerLogin = () => {
 
   return (
     <div className="login-container">
-      <style>
-        {`
-          /* UserLogin.css - Embedded for Canvas compatibility */
-
-          /* HomiFi Color Palette */
-          :root {
+  <style>
+{`
+  :root {
     --sportify-navy:   #354F60;
     --sportify-red:    #BC0E4C;
     --sportify-yellow: #FFC501;
@@ -238,249 +235,134 @@ const PlayerLogin = () => {
     --dark-text: #222222;
     --border-light: #e0e0e0;
     --clean-white: #ffffff;
-}
+  }
 
-/* Example main background + primary buttons */
+  body {
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-
-          body {
-              font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-          }
-
-          .login-container {
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-              background-color: var(--homifi-dark-blue);
-              padding: 20px;
-              box-sizing: border-box;
-          }
-
-          .login-box {
-              background-color: var(--clean-white);
-              padding: 40px;
-              border-radius: 12px;
-              box-shadow: 0 10px 30px rgba(32, 20, 59, 0.1);
-              text-align: center;
-              width: 100%;
-              max-width: 400px;
-              box-sizing: border-box;
-              border: 1px solid var(--border-light);
-          }
-
-          .login-box h2 {
-              margin-bottom: 25px;
-              color: var(--homifi-dark-blue);
-              font-size: 1.8em;
-              font-weight: 700;
-          }
-
-          .input-group {
-              margin-bottom: 15px;
-              position: relative;
-          }
-
-          .login-box input[type="email"],
-          .login-box input[type="password"],
-          .login-box input[type="text"] {
-              width: 100%;
-              padding: 12px;
-              border: 1px solid var(--border-light);
-              border-radius: 8px;
-              font-size: 1em;
-              box-sizing: border-box;
-              background-color: var(--soft-light-grey);
-              color: var(--dark-text);
-              transition: border-color 0.3s ease, box-shadow 0.3s ease;
-          }
-
-          .login-box input[type="email"]::placeholder,
-          .login-box input[type="password"]::placeholder,
-          .login-box input[type="text"]::placeholder {
-              color: var(--medium-text);
-          }
-
-          .login-box input[type="email"]:focus,
-          .login-box input[type="password"]:focus,
-          .login-box input[type="text"]:focus {
-              border-color: var(--homifi-teal);
-              outline: none;
-              box-shadow: 0 0 0 3px rgba(48, 213, 200, 0.25);
-          }
-
-          .password-input-group {
-              position: relative;
-              display: flex;
-              align-items: center;
-          }
-
-          .password-input-group input {
-              flex-grow: 1;
-              padding-right: 40px;
-          }
-
-          .show-password-toggle {
-              position: absolute;
-              right: 12px;
-              cursor: pointer;
-              font-size: 0.9em;
-              color: var(--homifi-dark-blue);
-              font-weight: 500;
-              user-select: none;
-              padding: 2px 5px;
-              border-radius: 3px;
-              transition: color 0.2s ease;
-          }
-
-          .show-password-toggle:hover {
-              color: var(--homifi-darker-blue);
-              text-decoration: underline;
-          }
-
-          .login-button {
-              width: 100%;
-              padding: 14px;
-              border: none;
-              border-radius: 8px;
-              font-size: 1.1em;
-              cursor: pointer;
-              transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
-              margin-top: 20px;
-              background: linear-gradient(135deg, var(--homifi-teal) 0%, var(--homifi-dark-blue) 100%);
-              color: var(--clean-white);
-              font-weight: 600;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-          }
-
-          .login-button:hover:not(:disabled) {
-              background: linear-gradient(135deg, #27c2b6 0%, #170e28 100%);
-              transform: translateY(-2px);
-              box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-          }
-
-          .login-button:disabled {
-              background-color: var(--border-light);
-              color: var(--light-text);
-              cursor: not-allowed;
-              transform: none;
-              box-shadow: none;
-          }
-
-          .error-message {
-              color: var(--error-red);
-              margin-top: 5px;
-              margin-bottom: 10px;
-              font-size: 0.85em;
-              text-align: left;
-              padding-left: 5px;
-          }
-
-          .success-message {
-              color: var(--success-green);
-              margin-top: 10px;
-              margin-bottom: 15px;
-              font-size: 0.95em;
-          }
-
-          .password-rules {
-              list-style: none;
-              padding: 0;
-              margin: 5px 0 15px 0;
-              text-align: left;
-              font-size: 0.8em;
-              color: var(--dark-text);
-              background-color: var(--soft-light-grey);
-              border-radius: 8px;
-              padding: 10px 15px;
-              border: 1px solid var(--border-subtle);
-          }
-
-          .password-rules li {
-              margin-bottom: 3px;
-              display: flex;
-              align-items: center;
-          }
-
-          .password-rules li::before {
-              content: '✖';
-              color: var(--error-red);
-              margin-right: 8px;
-              font-weight: bold;
-              font-size: 1.1em;
-          }
-
-          .password-rules li.valid::before {
-              content: '✔';
-              color: var(--success-green);
-          }
-
-          .forgot-password,
-          .toggle-link {
-              margin-top: 20px;
-              font-size: 0.9em;
-              color: var(--homifi-dark-blue);
-              cursor: pointer;
-              transition: color 0.2s ease, text-decoration 0.2s ease;
-          }
-
-          .forgot-password:hover,
-          .toggle-link:hover {
-              text-decoration: underline;
-              color: var(--homifi-teal);
-          }
-
-          .back-to-main-login {
-              margin-top: 15px;
-              font-size: 0.9em;
-              color: var(--medium-text);
-              cursor: pointer;
-              transition: color 0.2s ease;
-          }
-
-          .back-to-main-login:hover {
-              color: var(--dark-text);
-              text-decoration: underline;
-          }
-
-          /* Responsive Design */
-          @media (max-width: 600px) {
-              .login-box {
-                  padding: 30px 25px;
-                  margin: 20px;
-              }
-              .login-box h2 {
-                  font-size: 1.6em;
-                  margin-bottom: 20px;
-              }
-              .login-box input, .login-button {
-                  padding: 10px;
-                  font-size: 0.9em;
-              }
-              .password-rules {
-                  padding: 8px 10px;
-                  font-size: 0.75em;
-              }
-          }
-              .login-container {
+  .login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
     background-color: var(--sportify-navy);
-}
+    padding: 20px;
+    box-sizing: border-box;
+  }
 
-.primary-button {
+  .login-box {
+    background-color: var(--clean-white);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(32, 20, 59, 0.1);
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-light);
+  }
+
+  .login-box h2 {
+    margin-bottom: 25px;
+    color: var(--sportify-navy);
+    font-size: 1.8em;
+    font-weight: 700;
+  }
+
+  .input-group {
+    margin-bottom: 15px;
+    position: relative;
+  }
+
+  .login-box input[type="email"],
+  .login-box input[type="password"],
+  .login-box input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    font-size: 1em;
+    box-sizing: border-box;
+    background-color: #f3f4f6;
+    color: var(--dark-text);
+  }
+
+  .password-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .password-input-group input {
+    flex-grow: 1;
+    padding-right: 40px;
+  }
+
+  .show-password-toggle {
+    position: absolute;
+    right: 12px;
+    cursor: pointer;
+    font-size: 0.9em;
+    color: var(--sportify-navy);
+    font-weight: 500;
+  }
+
+  /* 🔥 CHANGED LOGIN BUTTON COLOR */
+  .login-button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    cursor: pointer;
+    margin-top: 20px;
     background-color: var(--sportify-yellow);
     color: #333;
-}
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 10px rgba(255, 197, 1, 0.4);
+    transition: 0.3s ease;
+  }
 
-.primary-button:hover {
+  /* ✨ New Hover */
+  .login-button:hover:not(:disabled) {
     background-color: #e0b700;
-}
-        `}
-      </style>
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(224, 183, 0, 0.6);
+  }
+
+  .login-button:disabled {
+    background-color: var(--border-light);
+    color: #999;
+  }
+
+  .forgot-password,
+  .toggle-link,
+  .back-to-main-login {
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: var(--sportify-navy);
+    cursor: pointer;
+  }
+
+  @media (max-width: 600px) {
+    .login-box {
+      padding: 30px 25px;
+      margin: 20px;
+    }
+    .login-box h2 {
+      font-size: 1.6em;
+      margin-bottom: 20px;
+    }
+  }
+`}
+</style>
+
       <div className="login-box">
         <h2>
           {isSignUp ? 'Player Sign Up' : forgotPassword ? 'Reset Password' : 'Player Login'}
